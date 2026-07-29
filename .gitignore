@@ -1,0 +1,27 @@
+# Rust
+/target
+**/target
+Cargo.lock.bak
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Node (for the npm wrapper)
+node_modules/
+npm-debug.log*
+
+# Build artifacts
+dist/
+*.tgz
+
+# Local secrets / env
+.env
+.env.*
+!.env.example
+
+# ailint output files
+ailint-report.*

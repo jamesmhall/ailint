@@ -1,0 +1,26 @@
+# ailint configuration.
+# See https://github.com/OWNER/ailint for the full rule catalog.
+
+rules:
+  # Rule IDs (AIL001) or slugs (no-vague-instruction) to disable.
+  disabled: []
+  # Override the default severity of a rule.
+  # severity_overrides:
+  #   AIL100: warning
+
+paths:
+  exclude:
+    - node_modules
+    - .git
+    - target
+    - dist
+
+# Enable AI-powered analysis (opt-in). Requires an API key in the
+# provider-specific env var or AILINT_LLM_API_KEY.
+# llm:
+#   provider: openai      # openai | anthropic | google | ollama | compatible
+#   model: gpt-4o
+
+output:
+  format: terminal        # terminal | json | sarif | markdown
+  color: auto             # auto | always | never

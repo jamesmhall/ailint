@@ -1,0 +1,20 @@
+{
+  "name": "ailint",
+  "version": "0.1.0",
+  "description": "Lint AI agent guidance files (CLAUDE.md, AGENTS.md, Copilot instructions, Cursor rules, ...).",
+  "bin": {
+    "ailint": "index.js"
+  },
+  "scripts": {
+    "postinstall": "node install.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OWNER/ailint.git"
+  },
+  "keywords": ["ai", "lint", "cli", "agents", "claude", "copilot", "cursor"],
+  "license": "(MIT OR Apache-2.0)",
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -1,0 +1,14 @@
+# ailint's own configuration — dogfood.
+
+rules:
+  disabled: []
+
+paths:
+  exclude:
+    - target
+    - node_modules
+    - .git
+
+output:
+  format: terminal
+  color: auto
