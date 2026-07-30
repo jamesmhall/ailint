@@ -1,7 +1,8 @@
 # syntax=docker/dockerfile:1.6
 
 # Build stage: static musl binary for the requested platform.
-FROM rust:1.75-alpine AS builder
+# Newer than MSRV: cargo 1.75 cannot parse current crates.io manifests.
+FROM rust:1.88-alpine AS builder
 
 ARG TARGETARCH
 ARG GIT_SHA=unknown

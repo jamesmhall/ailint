@@ -58,7 +58,7 @@ When scaling agentic engineering, unlinted guidance files lead to catastrophic c
 cargo install ailint-cli
 
 # npx wrapper (downloads a prebuilt binary)
-npx ailint check .
+npx @jamesmhall/ailint check .
 
 # Docker
 docker run --rm -v "$PWD":/src ghcr.io/jamesmhall/ailint check /src
