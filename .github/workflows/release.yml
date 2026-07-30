@@ -119,7 +119,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Publish crates
         env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: |
           set -euo pipefail
           cargo publish -p ailint-core --locked
