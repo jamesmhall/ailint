@@ -109,8 +109,9 @@ statements — everything user-visible flows through a reporter.
 
 `.ailint.yaml` at the repo root. Schema is defined in
 [crates/ailint-core/src/config.rs](crates/ailint-core/src/config.rs).
-When you add a config knob, update the `.ailint.yaml.template` at the
-repo root in the same PR.
+When you add a config knob, update
+[crates/ailint-cli/.ailint.yaml.template](crates/ailint-cli/.ailint.yaml.template)
+in the same PR.
 
 ## PR checklist
 

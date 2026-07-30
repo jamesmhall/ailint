@@ -299,7 +299,7 @@ fn cmd_stats(args: StatsArgs, config: Config) -> Result<ExitCode> {
 }
 
 fn cmd_init(args: InitArgs) -> Result<ExitCode> {
-    const TEMPLATE: &str = include_str!("../../../.ailint.yaml.template");
+    const TEMPLATE: &str = include_str!("../.ailint.yaml.template");
     let path = Path::new(".ailint.yaml");
     if path.exists() && !args.force {
         eprintln!("ailint: .ailint.yaml already exists (pass --force to overwrite)");

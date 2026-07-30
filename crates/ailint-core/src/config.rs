@@ -365,7 +365,7 @@ output:
 
     #[test]
     fn template_yaml_parses_cleanly() {
-        let raw = include_str!("../../../.ailint.yaml.template");
+        let raw = include_str!("../../ailint-cli/.ailint.yaml.template");
         let cfg: Config =
             serde_yaml::from_str(raw).unwrap_or_else(|e| panic!("template failed to parse: {e}"));
         assert!(cfg.paths.respect_gitignore);
