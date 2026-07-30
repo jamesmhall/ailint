@@ -1,0 +1,15 @@
+# pre-commit hook definitions for ailint.
+# Usage in a consumer repo's .pre-commit-config.yaml:
+#
+#   repos:
+#     - repo: https://github.com/jamesmhall/ailint
+#       rev: v1.0.1
+#       hooks:
+#         - id: ailint
+- id: ailint
+  name: ailint
+  description: Lint AI agent guidance files (CLAUDE.md, AGENTS.md, Copilot instructions, Cursor rules, ...).
+  entry: ailint check
+  language: rust
+  pass_filenames: false
+  types_or: [markdown, yaml, text]

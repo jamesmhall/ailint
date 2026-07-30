@@ -1,21 +1,40 @@
 # syntax=docker/dockerfile:1.6
-# TODO:
-#   - pin Rust and base image digests
-#   - build musl for a smaller final image
-#   - multi-arch build via buildx
-#   - non-root user
-#   - OCI labels (title, source, licenses, revision)
 
-FROM rust:1.75-slim AS builder
+# Build stage: static musl binary for the requested platform.
+FROM rust:1.75-alpine AS builder
+
+ARG TARGETARCH
+ARG GIT_SHA=unknown
+
+RUN apk add --no-cache musl-dev
+
 WORKDIR /src
 COPY . .
+
 RUN --mount=type=cache,target=/root/.cargo/registry \
     --mount=type=cache,target=/src/target \
-    cargo build --release -p ailint-cli \
- && cp /src/target/release/ailint /usr/local/bin/ailint
+    mkdir -p /out && \
+    case "${TARGETARCH}" in \
+      amd64) RUST_TARGET=x86_64-unknown-linux-musl ;; \
+      arm64) RUST_TARGET=aarch64-unknown-linux-musl ;; \
+      *) echo "unsupported arch: ${TARGETARCH}" && exit 1 ;; \
+    esac && \
+    rustup target add "$RUST_TARGET" && \
+    cargo build --release --target "$RUST_TARGET" -p ailint-cli && \
+    cp "target/$RUST_TARGET/release/ailint" /out/ailint
 
-FROM gcr.io/distroless/cc-debian12:nonroot
-COPY --from=builder /usr/local/bin/ailint /usr/local/bin/ailint
+# Runtime stage: distroless static, non-root uid 65532.
+FROM gcr.io/distroless/static-debian12:nonroot
+
+ARG GIT_SHA=unknown
+
+LABEL org.opencontainers.image.title="ailint"
+LABEL org.opencontainers.image.source="https://github.com/jamesmhall/ailint"
+LABEL org.opencontainers.image.licenses="MIT OR Apache-2.0"
+LABEL org.opencontainers.image.description="Lint AI agent guidance files."
+LABEL org.opencontainers.image.revision="${GIT_SHA}"
+
+COPY --from=builder /out/ailint /ailint
 WORKDIR /workspace
-ENTRYPOINT ["/usr/local/bin/ailint"]
+ENTRYPOINT ["/ailint"]
 CMD ["check", "."]

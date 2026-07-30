@@ -1,13 +1,19 @@
 # ailint's own configuration — dogfood.
 
 rules:
-  disabled: []
+  disabled:
+    # This repo's guidance style is plain Markdown with intentional
+    # "what not to do" lists (see .github/instructions/markdown.instructions.md).
+    - negative-constraint-overload
+    - vendor-optimization-syntax
 
 paths:
   exclude:
     - target
     - node_modules
     - .git
+    # Fixtures are intentional bad examples asserted against by tests.
+    - crates/*/tests/fixtures/**
 
 output:
   format: terminal

@@ -4,12 +4,13 @@
 //! runs a configurable set of lint rules, and emits reports in multiple
 //! formats.
 //!
-//! The public surface is intentionally small right now — this crate is a
-//! scaffold and most modules contain `TODO` markers.
+//! Discovers guidance files via [`discovery`], parses them via [`parser`],
+//! runs rules registered in [`rules::registry`], and emits reports via
+//! [`reporter`].
 
 #![deny(rust_2018_idioms)]
 #![warn(missing_debug_implementations)]
-// TODO: enable `#![warn(missing_docs)]` once the public API stabilizes.
+#![warn(missing_docs)]
 
 pub mod config;
 pub mod discovery;
@@ -30,21 +31,27 @@ pub use crate::rules::{RuleId, Severity, Violation};
 /// A single discovered guidance file and its detected type.
 #[derive(Debug, Clone)]
 pub struct DiscoveredFile {
+    /// Location on disk.
     pub path: PathBuf,
+    /// Detected guidance file type.
     pub file_type: FileType,
 }
 
 /// Top-level entry point: discover files under `root`, run enabled rules, and
 /// return the aggregated violations.
-///
-/// TODO: wire this to the real discovery + rule engine. Currently returns an
-/// empty vec so downstream code (CLI, tests) can compile.
-pub fn lint(root: &Path, _config: &Config) -> Result<Vec<Violation>> {
-    tracing::debug!(root = %root.display(), "ailint::lint invoked (stub)");
-    // TODO: discovery::walk(root, config) -> Vec<DiscoveredFile>
-    // TODO: parser::parse(&file) -> ParsedDocument
-    // TODO: rules::registry::run_all(&doc, config) -> Vec<Violation>
-    Ok(Vec::new())
+pub fn lint(root: &Path, config: &Config) -> Result<Vec<Violation>> {
+    let files = discovery::walk(root, config)?;
+    tracing::debug!(root = %root.display(), files = files.len(), "ailint::lint");
+    let mut docs = Vec::with_capacity(files.len());
+    for file in files {
+        docs.push(parser::parse(&file.path, file.file_type)?);
+    }
+    let mut violations = Vec::new();
+    for doc in &docs {
+        violations.extend(rules::registry::run_all(doc, config));
+    }
+    violations.extend(rules::registry::run_all_batch(&docs, config));
+    Ok(violations)
 }
 
 /// Version string embedded from Cargo.

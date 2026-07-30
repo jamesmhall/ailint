@@ -1,0 +1,8 @@
+<svg viewBox="0 0 100 100" width="120" height="120" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M50 10 L85 30 L85 70 L50 90 L15 70 L15 30 Z" fill="#D95300"></path>
+                    <path d="M50 22 L75 37 L75 63 L50 78 L25 63 L25 37 Z" fill="#FF7F27"></path>
+                    <g transform="translate(60, 20) scale(0.6)">
+                        <path d="M25 0 L32 20 L50 15 L40 30 L55 45 L35 40 L25 60 L15 40 L-5 45 L10 30 L0 15 L18 20 Z" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="6" stroke-linejoin="round"></path>
+                        <path d="M25 0 L32 20 L50 15 L40 30 L55 45 L35 40 L25 60 L15 40 L-5 45 L10 30 L0 15 L18 20 Z" fill="#FFA959" stroke="#FFA959" stroke-width="2" stroke-linejoin="round"></path>
+                    </g>
+                </svg>

@@ -1,26 +1,55 @@
 # ailint configuration.
-# See https://github.com/OWNER/ailint for the full rule catalog.
+# See https://github.com/jamesmhall/ailint for the full rule catalog.
 
 rules:
   # Rule IDs (AIL001) or slugs (no-vague-instruction) to disable.
   disabled: []
-  # Override the default severity of a rule.
+  # Override the default severity of a rule (info | warning | error).
   # severity_overrides:
   #   AIL100: warning
+  # Per-rule options, keyed by rule ID or slug.
+  # options:
+  #   AIL100:
+  #     phrases: ["maybe", "somehow", "properly"]
 
 paths:
+  # Path globs to exclude from discovery.
   exclude:
     - node_modules
     - .git
     - target
     - dist
+  # If non-empty, only paths matching one of these globs are linted.
+  include: []
+  # Follow symbolic links during discovery.
+  follow_symlinks: false
+  # Honor .gitignore and other VCS ignore files.
+  respect_gitignore: true
+  # Gitignore-style globs (relative to the repo root) marking prompt
+  # directories. Generic Markdown/YAML files under a matching directory are
+  # treated as system prompts instead of docs — there's no cross-framework
+  # filename convention for these (unlike CLAUDE.md, .cursorrules, etc.).
+  prompt_dirs:
+    - prompts/**
 
 # Enable AI-powered analysis (opt-in). Requires an API key in the
 # provider-specific env var or AILINT_LLM_API_KEY.
 # llm:
-#   provider: openai      # openai | anthropic | google | ollama | compatible
+#   provider: openai         # openai | anthropic | google | ollama | compatible
 #   model: gpt-4o
+#   base_url: https://api.openai.com/v1  # override for OpenAI-compatible endpoints
+#   timeout_seconds: 30      # per-request timeout
+#   max_tokens: 1024         # cap on generated tokens per request
+#   temperature: 0.2         # sampling temperature
+#   cost_cap_usd: 5.0        # stop LLM rules after cumulative spend exceeds this
 
 output:
-  format: terminal        # terminal | json | sarif | markdown
-  color: auto             # auto | always | never
+  format: terminal          # terminal | json | sarif | markdown
+  color: auto               # auto | always | never
+  # Write reporter output to this file instead of stdout.
+  # output_file: ailint-report.json
+  # Suppress non-violation output (banners, progress, summary lines).
+  quiet: false
+  # Verbosity of the trailing summary block.
+  summary_format: full      # full | compact | none
+

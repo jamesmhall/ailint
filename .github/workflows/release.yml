@@ -1,7 +1,3 @@
-# TODO: cross-compile with cargo-zigbuild for musl targets, sign macOS
-# binaries, publish crates.io in dependency order, generate SBOMs, publish
-# GHCR image, update Homebrew tap.
-
 name: Release
 
 on:
@@ -12,6 +8,8 @@ on:
 permissions:
   contents: write
   packages: write
+  id-token: write
+  attestations: write
 
 jobs:
   build:
@@ -37,22 +35,79 @@ jobs:
         with:
           targets: ${{ matrix.target }}
       - uses: Swatinem/rust-cache@v2
-      # TODO: install `cargo-zigbuild` on Linux for musl targets and swap
-      # `cargo build` for `cargo zigbuild`.
+      - name: Install zig (musl targets)
+        if: contains(matrix.target, 'musl')
+        uses: mlugg/setup-zig@v2
+      - name: Install cargo-zigbuild (musl targets)
+        if: contains(matrix.target, 'musl')
+        run: cargo install cargo-zigbuild --locked
       - name: Build
-        run: cargo build --release -p ailint-cli --target ${{ matrix.target }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ matrix.target }}" == *musl* ]]; then
+            cargo zigbuild --release -p ailint-cli --target ${{ matrix.target }}
+          else
+            cargo build --release -p ailint-cli --target ${{ matrix.target }}
+          fi
       - name: Package
         shell: bash
         run: |
           set -euo pipefail
-          # TODO: real packaging (tar.gz for unix, zip for windows), checksums,
-          # sigstore attestations.
           mkdir -p dist
-          echo "packaging placeholder for ${{ matrix.target }}" > dist/README.txt
+          VERSION="${GITHUB_REF_NAME}"
+          BIN=ailint
+          EXT=tar.gz
+          if [[ "${{ matrix.target }}" == *windows* ]]; then
+            BIN=ailint.exe
+            EXT=zip
+          fi
+          ASSET="ailint-${VERSION}-${{ matrix.target }}.${EXT}"
+          cp "target/${{ matrix.target }}/release/${BIN}" "dist/${BIN}"
+          cd dist
+          if [[ "${EXT}" == "zip" ]]; then
+            7z a "${ASSET}" "${BIN}" >/dev/null
+          else
+            tar czf "${ASSET}" "${BIN}"
+          fi
+          if command -v sha256sum >/dev/null 2>&1; then
+            sha256sum "${ASSET}" > "${ASSET}.sha256"
+          else
+            shasum -a 256 "${ASSET}" > "${ASSET}.sha256"
+          fi
+          rm -f "${BIN}"
       - uses: actions/upload-artifact@v4
         with:
           name: ailint-${{ matrix.target }}
-          path: dist/
+          path: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/*.sha256
+
+  release:
+    name: publish GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Attest build provenance (sigstore)
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            dist/*.tar.gz
+            dist/*.zip
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/*.sha256
+          generate_release_notes: true
 
   publish-crates:
     name: publish to crates.io
@@ -62,9 +117,66 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      # TODO: publish in dependency order: ailint-core → ailint-llm → ailint-cli
-      # cargo publish -p ailint-core --token ${{ secrets.CRATES_IO_TOKEN }}
-      # cargo publish -p ailint-llm  --token ${{ secrets.CRATES_IO_TOKEN }}
-      # cargo publish -p ailint-cli  --token ${{ secrets.CRATES_IO_TOKEN }}
-      - name: placeholder
-        run: echo "TODO wire cargo publish"
+      - name: Publish crates
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
+        run: |
+          set -euo pipefail
+          cargo publish -p ailint-core --locked
+          sleep 20
+          cargo publish -p ailint-llm --locked
+          sleep 20
+          cargo publish -p ailint-cli --locked
+
+  publish-docker:
+    name: publish GHCR image
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/jamesmhall/ailint:${{ github.ref_name }}
+            ghcr.io/jamesmhall/ailint:latest
+          build-args: |
+            GIT_SHA=${{ github.sha }}
+
+  update-homebrew-formula:
+    name: update Homebrew formula
+    needs: release
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Update formula url and sha256
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          URL="https://github.com/${GITHUB_REPOSITORY}/archive/refs/tags/${TAG}.tar.gz"
+          SHA=$(curl -fsSL "${URL}" | sha256sum | cut -d' ' -f1)
+          sed -i -E "s|archive/refs/tags/v[0-9][0-9.]*\.tar\.gz|archive/refs/tags/${TAG}.tar.gz|" Formula/ailint.rb
+          sed -i -E "s|^  sha256 \"[0-9a-f]+\"|  sha256 \"${SHA}\"|" Formula/ailint.rb
+      - name: Commit formula
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/ailint.rb
+          git diff --cached --quiet || git commit -m "chore: update Homebrew formula for ${GITHUB_REF_NAME}"
+          git push origin main

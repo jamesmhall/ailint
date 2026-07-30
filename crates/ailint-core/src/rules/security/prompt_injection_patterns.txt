@@ -1,0 +1,11 @@
+# Default regex patterns for AIL200 no-prompt-injection-marker.
+# One case-insensitive regex per line; blank lines and '#' lines are ignored.
+\bignore (all|previous|prior|any) instructions?\b
+\bdisregard (all|previous|prior|any) instructions?\b
+\byou are now (a|an)\b
+\bnew system prompt\b
+\boverride (system|the) prompt\b
+\bjailbreak\b(?:[^-_]|$)
+\bDAN mode\b
+<<SYS>>
+\[\[?INST\]?\]

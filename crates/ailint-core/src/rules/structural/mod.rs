@@ -1,13 +1,38 @@
 //! Structural rules: schema / frontmatter / required-section validation.
 //! Range: **AIL001 – AIL099**.
-//!
-//! TODO: implement concrete rules. Planned first pass:
-//! - AIL001 `no-frontmatter-schema-error` — invalid YAML frontmatter
-//! - AIL002 `instructions-file-empty` — file is empty or whitespace only
-//! - AIL003 `missing-required-section` — required heading missing
 
-use crate::rules::RuleId;
+pub mod broken_local_link;
+pub mod empty_file;
+pub mod frontmatter_schema;
+pub mod malformed_yaml;
+pub mod required_section;
 
+pub use broken_local_link::BrokenLocalLinkRule;
+pub use empty_file::EmptyFileRule;
+pub use frontmatter_schema::FrontmatterSchemaRule;
+pub use malformed_yaml::MalformedYamlRule;
+pub use required_section::MissingRequiredSectionRule;
+
+use crate::rules::{Rule, RuleId};
+
+/// AIL001: frontmatter fails the schema expected for its file type.
 pub const AIL001: RuleId = RuleId::new(1, "no-frontmatter-schema-error");
+/// AIL002: guidance file is empty or whitespace-only.
 pub const AIL002: RuleId = RuleId::new(2, "instructions-file-empty");
+/// AIL003: a section required for this file type is missing.
 pub const AIL003: RuleId = RuleId::new(3, "missing-required-section");
+/// AIL040: relative link points at a file that does not exist.
+pub const AIL040: RuleId = RuleId::new(40, "broken-local-link");
+/// AIL041: YAML file (or frontmatter) fails to parse.
+pub const AIL041: RuleId = RuleId::new(41, "malformed-yaml");
+
+/// All structural rules, in registration order.
+pub fn all_rules() -> Vec<Box<dyn Rule>> {
+    vec![
+        Box::new(EmptyFileRule),
+        Box::new(FrontmatterSchemaRule),
+        Box::new(MissingRequiredSectionRule),
+        Box::new(BrokenLocalLinkRule),
+        Box::new(MalformedYamlRule),
+    ]
+}

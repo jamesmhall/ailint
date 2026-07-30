@@ -1,17 +1,21 @@
-//! The `ailint` binary.
-//!
-//! Subcommands: `check`, `stats`, `init`, `list-rules`. Everything is a
-//! scaffold — see `TODO` markers.
+//! The `ailint` binary. Subcommands: `check`, `stats`, `init`, `list-rules`,
+//! `schema`.
 
 use std::io::{self, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use clap::{Parser, Subcommand, ValueEnum};
 
-use ailint_core::config::{ColorMode, Config};
+use ailint_core::config::{ColorMode, Config, LlmConfig, LlmProviderKind};
 use ailint_core::reporter::{self, ReporterKind};
+use ailint_core::rules::{registry, Severity};
+
+mod stats;
+
+#[cfg(feature = "llm")]
+mod llm_bridge;
 
 /// Lint and inspect AI agent guidance files.
 #[derive(Debug, Parser)]
@@ -27,6 +31,10 @@ struct Cli {
     /// Increase logging verbosity (`-v`, `-vv`).
     #[arg(short, long, global = true, action = clap::ArgAction::Count)]
     verbose: u8,
+
+    /// Log output format.
+    #[arg(long, global = true, value_enum, default_value_t = LogFormatArg::Text)]
+    log_format: LogFormatArg,
 }
 
 #[derive(Debug, Subcommand)]
@@ -36,9 +44,11 @@ enum Command {
     /// Print coverage / stats about guidance files.
     Stats(StatsArgs),
     /// Scaffold a `.ailint.yaml` in the current directory.
-    Init,
+    Init(InitArgs),
     /// List every rule with its ID, slug, and default severity.
     ListRules,
+    /// Print the JSON Schema for `.ailint.yaml`.
+    Schema,
 }
 
 #[derive(Debug, clap::Args)]
@@ -82,6 +92,13 @@ struct StatsArgs {
     paths: Vec<PathBuf>,
 }
 
+#[derive(Debug, clap::Args)]
+struct InitArgs {
+    /// Overwrite an existing .ailint.yaml.
+    #[arg(short, long)]
+    force: bool,
+}
+
 #[derive(Debug, Clone, Copy, ValueEnum)]
 enum FormatArg {
     Terminal,
@@ -111,9 +128,28 @@ enum LlmProviderArg {
     Compatible,
 }
 
+impl From<LlmProviderArg> for LlmProviderKind {
+    fn from(p: LlmProviderArg) -> Self {
+        match p {
+            LlmProviderArg::Openai => LlmProviderKind::Openai,
+            LlmProviderArg::Anthropic => LlmProviderKind::Anthropic,
+            LlmProviderArg::Google => LlmProviderKind::Google,
+            LlmProviderArg::Ollama => LlmProviderKind::Ollama,
+            LlmProviderArg::Compatible => LlmProviderKind::Compatible,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, ValueEnum, Default)]
+enum LogFormatArg {
+    #[default]
+    Text,
+    Json,
+}
+
 fn main() -> ExitCode {
     let cli = Cli::parse();
-    init_tracing(cli.verbose);
+    init_tracing(cli.verbose, cli.log_format);
 
     match run(cli) {
         Ok(code) => code,
@@ -125,35 +161,56 @@ fn main() -> ExitCode {
 }
 
 fn run(cli: Cli) -> Result<ExitCode> {
-    // TODO: proper config discovery — walk up from cwd.
-    let config = if let Some(ref p) = cli.config {
-        Config::load(p)?
-    } else {
-        Config::default()
-    };
+    let config = resolve_config(&cli)?;
 
     match cli.command {
         Command::Check(args) => cmd_check(args, config),
         Command::Stats(args) => cmd_stats(args, config),
-        Command::Init => cmd_init(),
+        Command::Init(args) => cmd_init(args),
         Command::ListRules => cmd_list_rules(),
+        Command::Schema => cmd_schema(),
+    }
+}
+
+fn resolve_config(cli: &Cli) -> Result<Config> {
+    if let Some(ref p) = cli.config {
+        tracing::info!(path = %p.display(), "loading config");
+        return Config::load(p);
+    }
+
+    let start: PathBuf = match &cli.command {
+        Command::Check(a) => a
+            .paths
+            .first()
+            .cloned()
+            .unwrap_or_else(|| PathBuf::from(".")),
+        Command::Stats(a) => a
+            .paths
+            .first()
+            .cloned()
+            .unwrap_or_else(|| PathBuf::from(".")),
+        Command::Init(_) | Command::ListRules | Command::Schema => PathBuf::from("."),
+    };
+
+    if let Some(found) = Config::discover(&start) {
+        tracing::info!(path = %found.display(), "discovered config");
+        Config::load(&found)
+    } else {
+        tracing::info!("using defaults (no config found)");
+        Ok(Config::default())
     }
 }
 
 fn cmd_check(args: CheckArgs, mut config: Config) -> Result<ExitCode> {
-    // TODO: apply --rule / --ignore / --max-warnings / --llm-* overrides on
-    // top of the loaded config before running.
-    for r in &args.ignore {
-        config.rules.disabled.push(r.clone());
-    }
-    let _ = &args.rule;
-    let _ = &args.max_warnings;
-    let _ = &args.llm_provider;
-    let _ = &args.llm_model;
+    apply_check_overrides(&args, &mut config)?;
 
     let mut violations = Vec::new();
     for path in &args.paths {
         violations.extend(ailint_core::lint(path, &config)?);
+        #[cfg(feature = "llm")]
+        {
+            violations.extend(llm_bridge::run(&config, path));
+        }
     }
 
     let reporter = reporter::make(args.format.into());
@@ -163,32 +220,89 @@ fn cmd_check(args: CheckArgs, mut config: Config) -> Result<ExitCode> {
     };
     reporter.report(&violations, sink.as_mut())?;
 
-    // TODO: real exit-code policy — fail on any Severity::Error, respect
-    // --max-warnings, etc.
-    if violations
+    let error_count = violations
         .iter()
-        .any(|v| matches!(v.severity, ailint_core::Severity::Error))
-    {
-        Ok(ExitCode::from(1))
-    } else {
-        Ok(ExitCode::SUCCESS)
+        .filter(|v| matches!(v.severity, Severity::Error))
+        .count();
+    let warning_count = violations
+        .iter()
+        .filter(|v| matches!(v.severity, Severity::Warning))
+        .count();
+    if error_count > 0 {
+        return Ok(ExitCode::from(1));
     }
-}
-
-fn cmd_stats(_args: StatsArgs, _config: Config) -> Result<ExitCode> {
-    // TODO: file counts by FileType, rule density, avg word count per rule,
-    // top-N files by violation count.
-    println!("ailint: stats not yet implemented");
+    if let Some(max) = args.max_warnings {
+        if warning_count > max {
+            return Ok(ExitCode::from(1));
+        }
+    }
     Ok(ExitCode::SUCCESS)
 }
 
-fn cmd_init() -> Result<ExitCode> {
-    // TODO: refuse to overwrite an existing .ailint.yaml unless --force is
-    // passed. Emit a fully-commented template.
+fn apply_check_overrides(args: &CheckArgs, config: &mut Config) -> Result<()> {
+    for r in &args.ignore {
+        config.rules.disabled.push(r.clone());
+    }
+
+    if !args.rule.is_empty() {
+        let allow: std::collections::HashSet<&str> = args.rule.iter().map(|s| s.as_str()).collect();
+        for rule in registry::all_rules() {
+            let id = rule.id();
+            let code = id.code_str();
+            if !allow.contains(code.as_str()) && !allow.contains(id.slug) {
+                config.rules.disabled.push(code);
+            }
+        }
+        for rule in registry::all_batch_rules() {
+            let id = rule.id();
+            let code = id.code_str();
+            if !allow.contains(code.as_str()) && !allow.contains(id.slug) {
+                config.rules.disabled.push(code);
+            }
+        }
+    }
+
+    match (args.llm_provider, args.llm_model.clone()) {
+        (Some(p), Some(m)) => {
+            if let Some(existing) = config.llm.as_mut() {
+                existing.provider = p.into();
+                existing.model = m;
+            } else {
+                config.llm = Some(LlmConfig {
+                    provider: p.into(),
+                    model: m,
+                    base_url: None,
+                    timeout_seconds: None,
+                    max_tokens: None,
+                    temperature: None,
+                    cost_cap_usd: None,
+                });
+            }
+        }
+        (Some(p), None) => {
+            if let Some(existing) = config.llm.as_mut() {
+                existing.provider = p.into();
+            } else {
+                return Err(anyhow!(
+                    "--llm-provider requires --llm-model when no model is set in config"
+                ));
+            }
+        }
+        (None, _) => {}
+    }
+
+    Ok(())
+}
+
+fn cmd_stats(args: StatsArgs, config: Config) -> Result<ExitCode> {
+    stats::run(&args.paths, &config)
+}
+
+fn cmd_init(args: InitArgs) -> Result<ExitCode> {
     const TEMPLATE: &str = include_str!("../../../.ailint.yaml.template");
-    let path = std::path::Path::new(".ailint.yaml");
-    if path.exists() {
-        eprintln!("ailint: .ailint.yaml already exists");
+    let path = Path::new(".ailint.yaml");
+    if path.exists() && !args.force {
+        eprintln!("ailint: .ailint.yaml already exists (pass --force to overwrite)");
         return Ok(ExitCode::from(1));
     }
     std::fs::write(path, TEMPLATE)?;
@@ -197,45 +311,83 @@ fn cmd_init() -> Result<ExitCode> {
 }
 
 fn cmd_list_rules() -> Result<ExitCode> {
-    // TODO: iterate `registry::all_rules()` once populated. For now emit the
-    // static constants directly so users can see the planned rule surface.
-    use ailint_core::rules::{consistency, security, semantic, structural};
-    println!("{:<8}  {:<40}  category", "code", "slug");
-    println!("{:-<8}  {:-<40}  {:-<12}", "", "", "");
-    let rows: &[(ailint_core::RuleId, &str)] = &[
-        (structural::AIL001, "structural"),
-        (structural::AIL002, "structural"),
-        (structural::AIL003, "structural"),
-        (semantic::AIL100, "semantic"),
-        (semantic::AIL101, "semantic"),
-        (semantic::AIL102, "semantic"),
-        (semantic::AIL103, "semantic"),
-        (security::AIL200, "security"),
-        (security::AIL201, "security"),
-        (security::AIL202, "security"),
-        (consistency::AIL300, "consistency"),
-        (consistency::AIL301, "consistency"),
-    ];
-    for (id, category) in rows {
-        println!("{:<8}  {:<40}  {}", id.code_str(), id.slug, category);
+    println!("{:<8}  {:<40}  {:<12}  default", "code", "slug", "category");
+    println!("{:-<8}  {:-<40}  {:-<12}  {:-<8}", "", "", "", "");
+    for rule in registry::all_rules() {
+        let id = rule.id();
+        println!(
+            "{:<8}  {:<40}  {:<12}  {}",
+            id.code_str(),
+            id.slug,
+            category_for(id.code),
+            rule.default_severity().as_str(),
+        );
+    }
+    for rule in registry::all_batch_rules() {
+        let id = rule.id();
+        println!(
+            "{:<8}  {:<40}  {:<12}  {}",
+            id.code_str(),
+            id.slug,
+            category_for(id.code),
+            rule.default_severity().as_str(),
+        );
+    }
+    #[cfg(feature = "llm")]
+    {
+        println!();
+        println!("LLM rules (opt-in):");
+        let id = ailint_llm::AIL900;
+        println!(
+            "{:<8}  {:<40}  {:<12}  {}",
+            id.code_str(),
+            id.slug,
+            category_for(id.code),
+            Severity::Info.as_str(),
+        );
     }
     Ok(ExitCode::SUCCESS)
 }
 
-fn init_tracing(verbose: u8) {
+fn cmd_schema() -> Result<ExitCode> {
+    println!("{}", Config::json_schema()?);
+    Ok(ExitCode::SUCCESS)
+}
+
+fn category_for(code: u16) -> &'static str {
+    match code {
+        1..=99 => "structural",
+        100..=199 => "semantic",
+        200..=299 => "security",
+        300..=399 => "consistency",
+        900..=999 => "llm",
+        _ => "other",
+    }
+}
+
+fn init_tracing(verbose: u8, log_format: LogFormatArg) {
     let level = match verbose {
         0 => "warn",
         1 => "info",
         _ => "debug",
     };
-    // TODO: allow AILINT_LOG env override, structured JSON logging in CI.
-    let _ = tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_env("AILINT_LOG")
-                .unwrap_or_else(|_| level.into()),
-        )
-        .with_target(false)
-        .try_init();
+    let filter =
+        tracing_subscriber::EnvFilter::try_from_env("AILINT_LOG").unwrap_or_else(|_| level.into());
+    match log_format {
+        LogFormatArg::Text => {
+            let _ = tracing_subscriber::fmt()
+                .with_env_filter(filter)
+                .with_target(false)
+                .try_init();
+        }
+        LogFormatArg::Json => {
+            let _ = tracing_subscriber::fmt()
+                .with_env_filter(filter)
+                .with_target(false)
+                .json()
+                .try_init();
+        }
+    }
 }
 
 // Silence unused imports during scaffold.

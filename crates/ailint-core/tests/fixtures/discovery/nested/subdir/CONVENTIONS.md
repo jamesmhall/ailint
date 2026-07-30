@@ -1,0 +1,3 @@
+# Conventions
+
+Fixture aider conventions.

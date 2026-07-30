@@ -1,16 +1,43 @@
-# ailint
+<div align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="media/logo_vertical_dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="media/logo_vertical.svg">
+    <img src="media/logo_vertical.svg" alt="ailint logo" width="300" />
+  </picture>
+</div>
+
+<br />
 
 **Lint and inspect AI agent guidance files.**
 
 `ailint` is an open-source CLI that scans a repository for AI agent guidance —
-`CLAUDE.md`, `AGENTS.md`, GitHub Copilot instructions, VS Code `.instructions.md`
-/ `.prompt.md` / `.agent.md`, Cursor / Windsurf / Cline rules, and generic
-system prompts — and reports structural, semantic, security, and cross-file
-consistency issues.
+`CLAUDE.md`, `AGENTS.md` (also used by Google Antigravity, OpenAI Codex, and
+Aider), GitHub Copilot instructions, VS Code `.instructions.md` /
+`.prompt.md` / `.agent.md`, Cursor / Windsurf / Cline rules, JetBrains Junie
+guidelines, and generic system prompts. It reports structural, semantic,
+security, and cross-file consistency issues.
 
-> Status: **early scaffold**. Everything is stubbed; see `TODO` markers.
+## The Missing Guardrail for Agentic Engineering
 
-## Features (planned)
+When scaling agentic engineering, unlinted guidance files lead to catastrophic context drift. Without strict enforcement, AI agents and copilots can run amuck—executing dangerous commands, hallucinating implementations, and making destructive edits to critical business logic.
+
+`ailint` acts as the essential firewall. It ensures your agents remain strictly aligned with team policies and safely within their operational lanes, guaranteeing that vital human-in-the-loop oversight is augmented by rigid, automated rule enforcement.
+
+## Status
+
+- Structural, semantic, security, and consistency rules — 18 rules total
+  (15 per-doc + 3 cross-file batch).
+- 4 reporters: colored terminal, JSON, SARIF 2.1.0 (GitHub code scanning),
+  and Markdown.
+- Optional LLM analyzer (`AIL900`) with OpenAI, Anthropic, Google, and
+  Ollama providers; opt-in via `--llm-provider`.
+- `.ailint.yaml` config discovery walks parent directories from the target.
+- Slim CLI build supported via `cargo build -p ailint-cli --no-default-features`
+  (drops the `ailint-llm` crate + tokio).
+- Packaging: cross-compiled release binaries, Docker image, `npx` wrapper,
+  GitHub Action, and pre-commit hook.
+
+## Features
 
 - Auto-detects AI agent guidance files across a project tree
 - Rule categories:
@@ -33,11 +60,19 @@ cargo install ailint-cli
 # npx wrapper (downloads a prebuilt binary)
 npx ailint check .
 
-# Homebrew (TODO: publish tap)
-# brew install ailint
-
 # Docker
-# docker run --rm -v "$PWD":/src ghcr.io/OWNER/ailint check /src
+docker run --rm -v "$PWD":/src ghcr.io/jamesmhall/ailint check /src
+
+# pre-commit hook
+# repos:
+#   - repo: https://github.com/jamesmhall/ailint
+#     rev: v1.0.1
+#     hooks:
+#       - id: ailint
+
+# Homebrew (in-repo tap)
+brew tap jamesmhall/ailint https://github.com/jamesmhall/ailint
+brew install jamesmhall/ailint/ailint
 ```
 
 ## Usage
@@ -48,6 +83,7 @@ ailint check . --format sarif -o out.sarif
 ailint stats .                       # coverage / rule-density report
 ailint init                          # scaffold .ailint.yaml
 ailint list-rules                    # print all rules
+ailint schema                        # JSON Schema for .ailint.yaml
 ```
 
 ## Configuration
@@ -75,7 +111,8 @@ output:
 ## Rules
 
 Each rule has a numeric code (`AIL001`) and a slug (`no-vague-instruction`).
-Either can be used to enable / disable / suppress.
+Either can be used to enable / disable / suppress. Full documentation for
+every rule lives in [docs/rules/README.md](docs/rules/README.md).
 
 | Range | Category | Examples |
 |-------|----------|----------|
@@ -89,6 +126,8 @@ Run `ailint list-rules` for the current full list.
 
 ## Workspace layout
 
+The repository is structured to separate the core engine, LLM integrations, and the CLI binary:
+
 ```
 ailint/
 ├── crates/
@@ -99,6 +138,15 @@ ailint/
 ├── npm/               # npx wrapper
 └── docker/Dockerfile
 ```
+
+## About the Project
+
+`ailint` is an open-source initiative built out of the practical necessities of production-grade AI orchestration. It was created by [Jamie Hall](https://linkedin.com/in/jamesmhall), an industry software architect with 25 years of software development experience specializing in high-level AI agent architecture and complex system design.
+
+After directing engineering teams and architecting cross-platform strategies that autonomously convert Jira tickets into mergeable pull requests, it became clear that the biggest bottleneck to scaling AI isn't the models—it's managing context drift. `ailint` was built in the true spirit of open-source software to enforce rigid architectural guidelines, eliminate "AI slop," and provide the essential tooling necessary for reliable, standardized code generation.
+
+Contributions, discussions, and collaborations are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and PR flow, and
+[AGENTS.md](AGENTS.md) for the full engineering conventions.
 
 ## License
 

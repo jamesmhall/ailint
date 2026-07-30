@@ -1,0 +1,12 @@
+<svg viewBox="0 0 320 100" width="320" height="100" xmlns="http://www.w3.org/2000/svg">
+                    <g transform="translate(10, 10) scale(0.8)">
+                        <path d="M50 10 L85 30 L85 70 L50 90 L15 70 L15 30 Z" fill="#D95300"></path>
+                        <path d="M50 22 L75 37 L75 63 L50 78 L25 63 L25 37 Z" fill="#FF7F27"></path>
+                        <g transform="translate(60, 20) scale(0.6)">
+                            <path d="M25 0 L32 20 L50 15 L40 30 L55 45 L35 40 L25 60 L15 40 L-5 45 L10 30 L0 15 L18 20 Z" fill="#F9FAFB" stroke="#F9FAFB" stroke-width="6" stroke-linejoin="round"></path>
+                            <path d="M25 0 L32 20 L50 15 L40 30 L55 45 L35 40 L25 60 L15 40 L-5 45 L10 30 L0 15 L18 20 Z" fill="#FFA959" stroke="#FFA959" stroke-width="2" stroke-linejoin="round"></path>
+                        </g>
+                    </g>
+                    <text x="105" y="66" font-family="'Inter', -apple-system, sans-serif" font-size="44" font-weight="800" fill="#D95300">AI</text>
+                    <text x="165" y="66" font-family="'Inter', -apple-system, sans-serif" font-size="44" font-weight="500" fill="#27272A">Lint</text>
+                </svg>

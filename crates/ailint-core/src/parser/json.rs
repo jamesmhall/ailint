@@ -1,6 +1,4 @@
 //! JSON parsing for guidance files that store rules as JSON.
-//!
-//! TODO: return a typed representation once the schemas are known.
 
 use anyhow::Result;
 

@@ -1,0 +1,19 @@
+---
+description: Style rules for AI-agent guidance Markdown files.
+globs: "**/*.md"
+alwaysApply: false
+---
+
+# Guidance-file style
+
+Full context: [AGENTS.md](../../AGENTS.md).
+
+- Use imperatives, not vague passives.
+- Copy build / test / lint commands verbatim from
+  [AGENTS.md](../../AGENTS.md) — do not paraphrase.
+- State MSRV and edition identically everywhere: Rust 1.75, edition
+  2021.
+- Point at [AGENTS.md](../../AGENTS.md) as the source of truth instead
+  of restating rules across files.
+- Do not invent tool conventions. If a tool has no publicly documented
+  file format, do not fabricate one.

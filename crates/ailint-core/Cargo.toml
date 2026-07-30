@@ -13,18 +13,23 @@ keywords.workspace = true
 categories.workspace = true
 
 [dependencies]
+aho-corasick.workspace = true
 anyhow.workspace = true
 thiserror.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 serde_yaml.workspace = true
-walkdir.workspace = true
 ignore.workspace = true
 pulldown-cmark.workspace = true
 colored.workspace = true
 glob.workspace = true
 regex.workspace = true
+schemars.workspace = true
 tracing.workspace = true
+unicode-segmentation.workspace = true
+serde-sarif = "0.7"
+chrono = { version = "0.4", default-features = false, features = ["clock", "serde"] }
 
 [dev-dependencies]
-# TODO: add insta for snapshot tests, tempfile for filesystem fixtures.
+insta = { version = "1", features = ["yaml"] }
+tempfile = "3"

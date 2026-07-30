@@ -1,0 +1,9 @@
+# Default negation prefixes for AIL300 no-conflicting-rules.
+# One prefix per line; blank lines and '#' lines are ignored.
+don't
+do not
+never
+avoid
+no
+prohibit
+refuse to

@@ -1,7 +1,5 @@
 //! YAML parsing for guidance files that store rules as YAML
 //! (e.g. Cursor rules, Windsurf rules).
-//!
-//! TODO: return a typed representation once the schemas are known.
 
 use anyhow::Result;
 

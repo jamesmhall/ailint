@@ -1,0 +1,15 @@
+# Default vague phrases for AIL100 no-vague-instruction.
+# One phrase per line; blank lines and '#' lines are ignored.
+be helpful
+do your best
+try to
+as needed
+when appropriate
+if possible
+as necessary
+carefully
+properly
+thoughtful
+reasonable
+high quality
+best practices

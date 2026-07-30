@@ -1,0 +1,36 @@
+# Windsurf rules — ailint
+
+Full conventions live in [AGENTS.md](AGENTS.md). This file is a short
+mirror for tools that read `.windsurfrules` directly.
+
+## Project
+
+Rust workspace: `ailint-core`, `ailint-llm`, `ailint-cli`. MSRV Rust
+1.75, edition 2021.
+
+## Rules
+
+- No `.unwrap()` / `.expect()` in `ailint-core` or `ailint-llm` outside
+  `#[cfg(test)]`.
+- No `reqwest` or provider SDK imports in `ailint-core`. All network
+  code lives in `ailint-llm`.
+- New lint rules are registered in
+  `crates/ailint-core/src/rules/registry.rs::all_rules` and follow the
+  `AILNNN` numeric-code + kebab-case slug pattern.
+- New file-type detections go in `crates/ailint-core/src/file_type.rs`
+  with a matching `as_str()` arm and a unit test.
+- User-visible output goes through a `ReporterKind`, never `println!`.
+- Every new rule ships with a positive and a negative fixture.
+- Do not commit real API keys or `.env` files.
+
+## Build and validate
+
+```
+cargo build --workspace
+cargo test  --workspace
+cargo clippy --workspace --all-targets -- -D warnings
+cargo fmt --all
+cargo run -p ailint-cli -- check .
+```
+
+All five must pass before opening a PR.

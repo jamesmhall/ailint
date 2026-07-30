@@ -1,0 +1,20 @@
+---
+description: Rust conventions for ailint (applied to Rust source files).
+globs: "**/*.rs"
+alwaysApply: false
+---
+
+# Rust conventions
+
+Full context: [AGENTS.md](../../AGENTS.md).
+
+- Use `anyhow::Result` at binary boundaries; use `thiserror` for library
+  error enums.
+- No `.unwrap()` / `.expect()` in `ailint-core` or `ailint-llm` outside
+  `#[cfg(test)]`.
+- No `reqwest` or provider SDK imports in `ailint-core`.
+- Follow `cargo fmt --all`; fix `cargo clippy -- -D warnings` rather than
+  suppressing.
+- Prefer `Path` / `PathBuf` over `String` for filesystem paths.
+- Every public item in `ailint-core` gets a doc comment describing what
+  a caller needs to know, not restating the signature.

@@ -1,0 +1,5 @@
+name: bad-config
+values:
+  - one
+  - two:
+    unbalanced: [1, 2

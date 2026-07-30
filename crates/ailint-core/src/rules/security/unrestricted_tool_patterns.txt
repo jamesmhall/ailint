@@ -1,0 +1,9 @@
+# Default regex patterns for AIL201 no-unrestricted-tool-grant.
+# One case-insensitive regex per line; blank lines and '#' lines are ignored.
+\byou have access to all tools\b
+\baccess to (any|every|all) (tool|command|api|shell)s?\b
+\bunrestricted (access|shell|tool)\b
+\brun (any|arbitrary) (command|code|shell)\b
+\bfull (root|admin|shell|sudo) access\b
+\bno restrictions on\b
+\bfeel free to (run|execute|call|invoke) (any|anything)\b

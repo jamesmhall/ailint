@@ -1,0 +1,6 @@
+---
+source: crates/ailint-core/tests/reporter_terminal.rs
+assertion_line: 50
+expression: "String::from_utf8(buf).unwrap()"
+---
+ailint: no violations

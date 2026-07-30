@@ -1,0 +1,88 @@
+---
+source: crates/ailint-core/tests/reporter_sarif.rs
+assertion_line: 135
+expression: "serde_json::to_string_pretty(&snapshot_value).unwrap()"
+---
+{
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "informationUri": "https://github.com/jamesmhall/ailint",
+  "results": [
+    {
+      "level": "error",
+      "locations": [
+        {
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "docs/AGENTS.md"
+            },
+            "region": {
+              "startColumn": 3,
+              "startLine": 12
+            }
+          }
+        }
+      ],
+      "message": {
+        "text": "possible prompt injection marker"
+      },
+      "ruleId": "AIL200"
+    },
+    {
+      "fixes": [
+        {
+          "artifactChanges": [
+            {
+              "artifactLocation": {
+                "uri": "CLAUDE.md"
+              },
+              "replacements": []
+            }
+          ],
+          "description": {
+            "text": "remove the vague phrase"
+          }
+        }
+      ],
+      "level": "warning",
+      "locations": [
+        {
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": "CLAUDE.md"
+            },
+            "region": {
+              "startColumn": 1,
+              "startLine": 4
+            }
+          }
+        }
+      ],
+      "message": {
+        "text": "vague phrase found: \"be careful\""
+      },
+      "ruleId": "AIL100"
+    },
+    {
+      "level": "note",
+      "locations": [
+        {
+          "physicalLocation": {
+            "artifactLocation": {
+              "uri": ".cursor/rules/empty.md"
+            },
+            "region": {
+              "startColumn": 1,
+              "startLine": 1
+            }
+          }
+        }
+      ],
+      "message": {
+        "text": "file is empty"
+      },
+      "ruleId": "AIL002"
+    }
+  ],
+  "toolName": "ailint",
+  "version": "2.1.0"
+}
