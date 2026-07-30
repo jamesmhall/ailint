@@ -5,6 +5,7 @@
   "bin": {
     "ailint": "index.js"
   },
+  "files": ["index.js", "install.js"],
   "scripts": {
     "postinstall": "node install.js"
   },
