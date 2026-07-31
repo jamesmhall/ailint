@@ -8,10 +8,11 @@ use chrono::{DateTime, SecondsFormat, Utc};
 use serde::Serialize;
 
 use crate::reporter::Reporter;
+use crate::rules::registry::rule_meta;
 use crate::rules::{Severity, Violation};
 use crate::VERSION;
 
-const SCHEMA_VERSION: &str = "1";
+const SCHEMA_VERSION: &str = "2";
 
 /// JSON reporter emitting a versioned schema for machine consumers.
 #[derive(Debug)]
@@ -77,6 +78,7 @@ struct ViolationEntry<'a> {
     rule: RuleEntry,
     severity: Severity,
     message: &'a str,
+    detail: Option<&'a str>,
     file: String,
     line: Option<usize>,
     column: Option<usize>,
@@ -89,6 +91,8 @@ struct ViolationEntry<'a> {
 struct RuleEntry {
     code: String,
     slug: &'static str,
+    description: &'static str,
+    fix_hint: &'static str,
 }
 
 fn build_report(violations: &[Violation], now: DateTime<Utc>) -> Report<'_> {
@@ -106,13 +110,17 @@ fn build_report(violations: &[Violation], now: DateTime<Utc>) -> Report<'_> {
         }
         let file = v.file.to_string_lossy().into_owned();
         *per_file.entry(file.clone()).or_insert(0) += 1;
+        let meta = rule_meta(v.rule_id);
         entries.push(ViolationEntry {
             rule: RuleEntry {
                 code: v.rule_id.code_str(),
                 slug: v.rule_id.slug,
+                description: meta.map(|m| m.description).unwrap_or(""),
+                fix_hint: meta.map(|m| m.fix_hint).unwrap_or(""),
             },
             severity: v.severity,
             message: &v.message,
+            detail: v.detail.as_deref(),
             file,
             line: v.line,
             column: v.column,

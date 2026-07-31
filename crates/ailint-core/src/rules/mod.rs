@@ -26,7 +26,7 @@ pub(crate) fn dictionary_lines(raw: &'static str) -> Vec<&'static str> {
 
 /// Numeric-code + slug identifier for a rule (e.g. `AIL001` /
 /// `no-frontmatter-schema-error`). Every rule owns exactly one `RuleId`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
 pub struct RuleId {
     /// Numeric part of the `AILNNN` code.
     pub code: u16,
@@ -98,6 +98,10 @@ pub struct Violation {
     pub snippet: Option<String>,
     /// Link to the rule's documentation page.
     pub source_url: Option<String>,
+    /// Varying finding-specific detail (link target, offending phrase,
+    /// duplicate line ref, YAML error text). Reporters show this once per
+    /// row instead of repeating a boilerplate prefix on every message.
+    pub detail: Option<String>,
 }
 
 impl Violation {
@@ -118,6 +122,7 @@ impl Violation {
             fix_hint: None,
             snippet: None,
             source_url: None,
+            detail: None,
         }
     }
 
@@ -125,6 +130,12 @@ impl Violation {
     pub fn at(mut self, line: usize, column: usize) -> Self {
         self.line = Some(line);
         self.column = Some(column);
+        self
+    }
+
+    /// Attach the varying finding-specific detail.
+    pub fn with_detail(mut self, detail: impl Into<String>) -> Self {
+        self.detail = Some(detail.into());
         self
     }
 }
@@ -146,6 +157,12 @@ pub trait Rule: Send + Sync {
     fn id(&self) -> RuleId;
     /// Severity when no config override applies.
     fn default_severity(&self) -> Severity;
+    /// One-line human description of what the rule enforces. Reporters show
+    /// this once per rule group so an auditor knows *why* it fired.
+    fn description(&self) -> &'static str;
+    /// One-line suggested remediation. Empty string means the rule has no
+    /// generic hint (the caller should look at the finding detail instead).
+    fn fix_hint(&self) -> &'static str;
     /// Inspect one document and return any findings.
     fn run(&self, doc: &ParsedDocument, ctx: &RuleContext<'_>) -> Vec<Violation>;
     /// Whether this rule should run against files of the given type. Defaults
@@ -163,6 +180,10 @@ pub trait BatchRule: Send + Sync {
     fn id(&self) -> RuleId;
     /// Severity when no config override applies.
     fn default_severity(&self) -> Severity;
+    /// One-line human description of what the rule enforces.
+    fn description(&self) -> &'static str;
+    /// One-line suggested remediation.
+    fn fix_hint(&self) -> &'static str;
     /// Inspect the whole corpus at once and return any findings.
     fn run_batch(&self, docs: &[ParsedDocument], ctx: &RuleContext<'_>) -> Vec<Violation>;
     /// Filter applied to each document before the batch rule sees it.

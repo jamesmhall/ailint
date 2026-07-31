@@ -25,6 +25,14 @@ impl BatchRule for OrphanedDocumentRule {
         Severity::Info
     }
 
+    fn description(&self) -> &'static str {
+        "Document is not reachable via local links from any README or AGENTS root."
+    }
+
+    fn fix_hint(&self) -> &'static str {
+        "Link it from a README or AGENTS file, or delete it."
+    }
+
     /// Applies to every Markdown document — this rule needs generic docs in
     /// scope to discover islands.
     fn applies_to(&self, file_type: FileType) -> bool {
@@ -61,7 +69,7 @@ impl BatchRule for OrphanedDocumentRule {
 
         // Roots for reachability:
         //   * every AI guidance file (each is an entry point for its tool)
-        //   * the shallowest `README.md` files (for generic project docs)
+        //   * the shallowest `README.md` and `AGENTS.md` files
         let roots = find_roots(docs, &paths);
         if roots.is_empty() {
             return Vec::new();
@@ -92,16 +100,11 @@ impl BatchRule for OrphanedDocumentRule {
         }
         for i in orphans {
             let doc = &docs[i];
-            let mut v = Violation::new(
+            let v = Violation::new(
                 AIL340,
                 self.default_severity(),
                 doc.path.clone(),
-                "document is not reachable via local links from any README root",
-            )
-            .at(1, 1);
-            v.fix_hint = Some(
-                "add a link from a README or another reachable document, or remove the file"
-                    .to_string(),
+                "orphaned document",
             );
             out.push(v);
         }
@@ -151,7 +154,8 @@ fn has_scheme(url: &str) -> bool {
 }
 
 /// Roots for reachability: every AI guidance document (each is an entry
-/// point for its tool) plus the shallowest `README.md` files.
+/// point for its tool) plus the shallowest `README.md` and `AGENTS.md`
+/// files (either counts as a project entry point).
 fn find_roots(docs: &[ParsedDocument], paths: &[PathBuf]) -> Vec<usize> {
     let mut roots: BTreeSet<usize> = BTreeSet::new();
 
@@ -161,16 +165,22 @@ fn find_roots(docs: &[ParsedDocument], paths: &[PathBuf]) -> Vec<usize> {
         }
     }
 
-    let mut readme_candidates: Vec<(usize, usize)> = Vec::new();
-    for (i, p) in paths.iter().enumerate() {
-        if p.file_name().and_then(|n| n.to_str()) == Some("README.md") {
-            readme_candidates.push((i, p.components().count()));
+    // README.md and AGENTS.md are treated the same: shallowest instance(s)
+    // of each name count as roots. We compute the minimum depth per name
+    // separately so a shallow README doesn't shadow a deeper AGENTS or vice
+    // versa.
+    for target in ["README.md", "AGENTS.md"] {
+        let mut candidates: Vec<(usize, usize)> = Vec::new();
+        for (i, p) in paths.iter().enumerate() {
+            if p.file_name().and_then(|n| n.to_str()) == Some(target) {
+                candidates.push((i, p.components().count()));
+            }
         }
-    }
-    if let Some(min_depth) = readme_candidates.iter().map(|(_, d)| *d).min() {
-        for (i, d) in readme_candidates {
-            if d == min_depth {
-                roots.insert(i);
+        if let Some(min_depth) = candidates.iter().map(|(_, d)| *d).min() {
+            for (i, d) in candidates {
+                if d == min_depth {
+                    roots.insert(i);
+                }
             }
         }
     }

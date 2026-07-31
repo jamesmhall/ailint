@@ -1,9 +1,57 @@
 //! Central registry of all built-in rules.
 
+use std::collections::HashMap;
+use std::sync::OnceLock;
+
 use crate::config::Config;
 use crate::parser::ParsedDocument;
 use crate::rules::{consistency, security, semantic, structural};
 use crate::rules::{BatchRule, Rule, RuleContext, RuleId, Severity, Violation};
+
+/// Static metadata for a rule, cached for reporters to look up.
+#[derive(Debug, Clone, Copy)]
+pub struct RuleMeta {
+    /// One-line human description of what the rule enforces.
+    pub description: &'static str,
+    /// One-line suggested remediation.
+    pub fix_hint: &'static str,
+    /// Default severity before any config overrides.
+    pub default_severity: Severity,
+}
+
+/// Look up cached metadata for a rule by its ID. Returns `None` only for
+/// rule IDs not present in the built-in registry.
+pub fn rule_meta(id: RuleId) -> Option<RuleMeta> {
+    rule_meta_cache().get(&id).copied()
+}
+
+fn rule_meta_cache() -> &'static HashMap<RuleId, RuleMeta> {
+    static CACHE: OnceLock<HashMap<RuleId, RuleMeta>> = OnceLock::new();
+    CACHE.get_or_init(|| {
+        let mut m = HashMap::new();
+        for r in all_rules() {
+            m.insert(
+                r.id(),
+                RuleMeta {
+                    description: r.description(),
+                    fix_hint: r.fix_hint(),
+                    default_severity: r.default_severity(),
+                },
+            );
+        }
+        for r in all_batch_rules() {
+            m.insert(
+                r.id(),
+                RuleMeta {
+                    description: r.description(),
+                    fix_hint: r.fix_hint(),
+                    default_severity: r.default_severity(),
+                },
+            );
+        }
+        m
+    })
+}
 
 /// Return the full set of built-in per-document rules.
 pub fn all_rules() -> Vec<Box<dyn Rule>> {

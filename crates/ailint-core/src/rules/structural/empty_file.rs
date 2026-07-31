@@ -19,6 +19,14 @@ impl Rule for EmptyFileRule {
         Severity::Warning
     }
 
+    fn description(&self) -> &'static str {
+        "Guidance file is empty or whitespace-only."
+    }
+
+    fn fix_hint(&self) -> &'static str {
+        "Add content, or delete the file."
+    }
+
     fn run(&self, doc: &ParsedDocument, _ctx: &RuleContext<'_>) -> Vec<Violation> {
         if !doc.raw.trim().is_empty() {
             return Vec::new();
@@ -28,7 +36,6 @@ impl Rule for EmptyFileRule {
             self.default_severity(),
             doc.path.clone(),
             "file is empty or contains only whitespace",
-        )
-        .at(1, 1)]
+        )]
     }
 }

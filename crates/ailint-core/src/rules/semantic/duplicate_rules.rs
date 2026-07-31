@@ -29,6 +29,14 @@ impl Rule for NoDuplicateRulesRule {
         Severity::Info
     }
 
+    fn description(&self) -> &'static str {
+        "Same rule text appears more than once in the file."
+    }
+
+    fn fix_hint(&self) -> &'static str {
+        "Delete or merge the duplicate."
+    }
+
     fn run(&self, doc: &ParsedDocument, ctx: &RuleContext<'_>) -> Vec<Violation> {
         let md = match &doc.content {
             DocumentContent::Markdown(m) => m,
@@ -54,9 +62,10 @@ impl Rule for NoDuplicateRulesRule {
                         AIL103,
                         self.default_severity(),
                         doc.path.clone(),
-                        format!("duplicate of rule at line {}", first_line),
+                        "duplicate rule",
                     )
-                    .at(item.line, 1);
+                    .at(item.line, 1)
+                    .with_detail(format!("first seen at L{first_line}"));
                     v.snippet = Some(snippet);
                     out.push(v);
                 }

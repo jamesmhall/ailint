@@ -23,6 +23,14 @@ impl Rule for BrokenLocalLinkRule {
         Severity::Warning
     }
 
+    fn description(&self) -> &'static str {
+        "Markdown link points to a path that does not exist on disk."
+    }
+
+    fn fix_hint(&self) -> &'static str {
+        "Correct the path, or remove the link."
+    }
+
     /// Applies to every Markdown document — guidance and generic project docs
     /// alike — since broken links are a universal quality concern.
     fn applies_to(&self, file_type: FileType) -> bool {
@@ -51,18 +59,14 @@ impl Rule for BrokenLocalLinkRule {
             if target.exists() {
                 continue;
             }
-            let mut v = Violation::new(
+            let v = Violation::new(
                 AIL040,
                 self.default_severity(),
                 doc.path.clone(),
-                format!("broken local link: '{}' does not exist", link.url),
+                "broken local link",
             )
-            .at(link.line, 1);
-            v.fix_hint = Some(format!(
-                "fix or remove the link '{}' (target `{}` not found)",
-                link.text,
-                target.display()
-            ));
+            .at(link.line, 1)
+            .with_detail(link.url.clone());
             out.push(v);
         }
 

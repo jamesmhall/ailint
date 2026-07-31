@@ -36,6 +36,14 @@ impl BatchRule for NoConflictingRulesRule {
         Severity::Warning
     }
 
+    fn description(&self) -> &'static str {
+        "Rule contradicts another rule elsewhere in the corpus."
+    }
+
+    fn fix_hint(&self) -> &'static str {
+        "Reconcile the two rules, or delete one."
+    }
+
     fn run_batch(&self, docs: &[ParsedDocument], ctx: &RuleContext<'_>) -> Vec<Violation> {
         let opts: Options = ctx
             .options
@@ -136,13 +144,11 @@ impl BatchRule for NoConflictingRulesRule {
                     AIL300,
                     self.default_severity(),
                     doc.path.clone(),
-                    format!("conflicts with '{}' in {}", other_text, other_name),
+                    "conflicting rule",
                 )
-                .at(item.line, 1);
+                .at(item.line, 1)
+                .with_detail(format!("conflicts with '{}' in {}", other_text, other_name));
                 v.snippet = Some(truncate_chars(&item.text, 120));
-                v.fix_hint = Some(
-                    "reconcile the two files so they don't give contradictory instructions".into(),
-                );
                 out.push(v);
             }
         }

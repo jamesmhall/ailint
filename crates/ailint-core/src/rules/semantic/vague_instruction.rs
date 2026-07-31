@@ -32,6 +32,14 @@ impl Rule for NoVagueInstructionRule {
         Severity::Warning
     }
 
+    fn description(&self) -> &'static str {
+        "List item contains vague, unactionable phrasing."
+    }
+
+    fn fix_hint(&self) -> &'static str {
+        "Replace with a concrete verb and target the agent can act on."
+    }
+
     fn run(&self, doc: &ParsedDocument, ctx: &RuleContext<'_>) -> Vec<Violation> {
         let md = match &doc.content {
             DocumentContent::Markdown(m) => m,
@@ -78,10 +86,10 @@ impl Rule for NoVagueInstructionRule {
                     AIL100,
                     self.default_severity(),
                     doc.path.clone(),
-                    format!("vague instruction: contains phrase '{}'", phrase),
+                    "vague phrase",
                 )
-                .at(item.line, 1);
-                v.fix_hint = Some("replace with a concrete, testable rule".into());
+                .at(item.line, 1)
+                .with_detail(phrase.clone());
                 v.snippet = Some(snippet);
                 out.push(v);
             }

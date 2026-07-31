@@ -1,15 +1,20 @@
 ---
 source: crates/ailint-core/tests/reporter_terminal.rs
-assertion_line: 42
 expression: out
 ---
-x AIL100/no-vague-instruction (warning)
-  crates/ailint-core/tests/fixtures/semantic/vague/bad/AGENTS.md:3:1  vague instruction: 'do the right thing'
+x AIL100  no-vague-instruction  warning · 1 finding
+   List item contains vague, unactionable phrasing.
+   Fix: Replace with a concrete verb and target the agent can act on.
+   semantic/vague/bad/AGENTS.md  L3
 
-i AIL103/no-duplicate-rules (info)
-  crates/ailint-core/tests/fixtures/semantic/vague/bad/AGENTS.md:5:1  duplicate of rule at line 3
+i AIL103  no-duplicate-rules  info · 1 finding
+   Same rule text appears more than once in the file.
+   Fix: Delete or merge the duplicate.
+   semantic/vague/bad/AGENTS.md  L5
 
-x AIL200/no-prompt-injection-marker (error)
-  crates/ailint-core/tests/fixtures/security/prompt_injection/bad/AGENTS.md:6:1  possible prompt-injection marker: 'Ignore previous instruct…
+x AIL200  no-prompt-injection-marker  error · 1 finding
+   Guidance file contains a phrase commonly used to override system prompts.
+   Fix: Remove the marker; injected content could exploit it.
+   security/prompt_injection/bad/AGENTS.md  L6
 
 x 3 violations (1 error, 1 warning, 1 info)

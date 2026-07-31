@@ -60,6 +60,6 @@ fn json_report_empty() {
     assert_eq!(value["summary"]["file_count"], 0);
     assert_eq!(value["files"].as_array().unwrap().len(), 0);
     assert_eq!(value["violations"].as_array().unwrap().len(), 0);
-    assert_eq!(value["schema_version"], "1");
+    assert_eq!(value["schema_version"], "2");
     assert_eq!(value["tool"]["name"], "ailint");
 }

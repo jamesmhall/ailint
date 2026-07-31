@@ -55,6 +55,8 @@ fn build_rule_descriptors() -> Vec<ReportingDescriptor> {
         descriptors.push(descriptor_for(
             rule.id().code_str(),
             rule.id().slug,
+            rule.description(),
+            rule.fix_hint(),
             rule.default_severity(),
         ));
     }
@@ -62,30 +64,58 @@ fn build_rule_descriptors() -> Vec<ReportingDescriptor> {
         descriptors.push(descriptor_for(
             rule.id().code_str(),
             rule.id().slug,
+            rule.description(),
+            rule.fix_hint(),
             rule.default_severity(),
         ));
     }
     descriptors
 }
 
-fn descriptor_for(id: String, slug: &'static str, severity: Severity) -> ReportingDescriptor {
+fn descriptor_for(
+    id: String,
+    slug: &'static str,
+    description: &'static str,
+    fix_hint: &'static str,
+    severity: Severity,
+) -> ReportingDescriptor {
     let short_description = MultiformatMessageString::builder()
-        .text(slug.to_string())
+        .text(if description.is_empty() {
+            slug.to_string()
+        } else {
+            description.to_string()
+        })
         .build();
     let default_configuration = ReportingConfiguration::builder()
         .level(json!(sarif_level(severity)))
         .build();
-    ReportingDescriptor::builder()
+    let help = if fix_hint.is_empty() {
+        None
+    } else {
+        Some(
+            MultiformatMessageString::builder()
+                .text(fix_hint.to_string())
+                .build(),
+        )
+    };
+    let builder = ReportingDescriptor::builder()
         .id(id)
         .name(slug.to_string())
         .short_description(short_description)
         .help_uri(format!("https://github.com/jamesmhall/ailint#{slug}"))
-        .default_configuration(default_configuration)
-        .build()
+        .default_configuration(default_configuration);
+    match help {
+        Some(h) => builder.help(h).build(),
+        None => builder.build(),
+    }
 }
 
 fn build_result(v: &Violation) -> SarifResult {
-    let message = Message::builder().text(v.message.clone()).build();
+    let message_text = match v.detail.as_deref() {
+        Some(d) if !d.is_empty() => format!("{}: {}", v.message, d),
+        _ => v.message.clone(),
+    };
+    let message = Message::builder().text(message_text).build();
 
     let artifact_location = ArtifactLocation::builder()
         .uri(v.file.to_string_lossy().into_owned())

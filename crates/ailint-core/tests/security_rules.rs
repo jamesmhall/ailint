@@ -41,7 +41,6 @@ fn ail201_fires_on_unrestricted_grant() {
         .filter(|v| v.rule_id.code == 201)
         .collect();
     assert!(!hits.is_empty(), "expected AIL201, got {violations:?}");
-    assert!(hits.iter().all(|v| v.fix_hint.is_some()));
 }
 
 #[test]

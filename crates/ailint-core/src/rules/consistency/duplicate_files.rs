@@ -31,6 +31,14 @@ impl BatchRule for NoDuplicateGuidanceFilesRule {
         Severity::Info
     }
 
+    fn description(&self) -> &'static str {
+        "File content is byte-identical to another guidance file."
+    }
+
+    fn fix_hint(&self) -> &'static str {
+        "Keep one file as the source of truth; delete or symlink the other."
+    }
+
     fn run_batch(&self, docs: &[ParsedDocument], ctx: &RuleContext<'_>) -> Vec<Violation> {
         let opts: Options = ctx
             .options
@@ -60,17 +68,13 @@ impl BatchRule for NoDuplicateGuidanceFilesRule {
                 .unwrap_or("<unknown>");
             for &idx in indices.iter().skip(1) {
                 let doc = &docs[idx];
-                let mut v = Violation::new(
+                let v = Violation::new(
                     AIL301,
                     self.default_severity(),
                     doc.path.clone(),
-                    format!("duplicate content: matches '{}'", first_name),
+                    "duplicate content",
                 )
-                .at(1, 1);
-                v.fix_hint = Some(
-                    "consolidate into a single source of truth and delete or shim the duplicate"
-                        .into(),
-                );
+                .with_detail(format!("matches {first_name}"));
                 out.push(v);
             }
         }

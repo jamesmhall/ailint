@@ -20,6 +20,14 @@ impl Rule for VendorOptimizationSyntaxRule {
         Severity::Warning
     }
 
+    fn description(&self) -> &'static str {
+        "Anthropic-hosted agents perform best with explicit XML tags (e.g. <conventions>)."
+    }
+
+    fn fix_hint(&self) -> &'static str {
+        "Wrap sections in <conventions>...</conventions> or similar XML tags."
+    }
+
     fn applies_to(&self, file_type: FileType) -> bool {
         matches!(file_type, FileType::ClaudeMd | FileType::ClineRules)
     }
@@ -29,13 +37,7 @@ impl Rule for VendorOptimizationSyntaxRule {
             && !doc.raw.contains("<rules>")
             && !doc.raw.contains("</")
         {
-            let mut v = Violation::new(
-                AIL105,
-                ctx.severity,
-                doc.path.clone(),
-                "Anthropic-hosted agents perform best with explicit XML tags (like <conventions>). No XML tags found.",
-            );
-            v.fix_hint = Some("Wrap your rules in <conventions>...</conventions> or similar XML tags based on Anthropic best practices.".to_string());
+            let v = Violation::new(AIL105, ctx.severity, doc.path.clone(), "no XML tags found");
             vec![v]
         } else {
             Vec::new()

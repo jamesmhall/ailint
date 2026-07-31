@@ -32,6 +32,14 @@ impl Rule for NoPromptInjectionMarkerRule {
         Severity::Error
     }
 
+    fn description(&self) -> &'static str {
+        "Guidance file contains a phrase commonly used to override system prompts."
+    }
+
+    fn fix_hint(&self) -> &'static str {
+        "Remove the marker; injected content could exploit it."
+    }
+
     fn run(&self, doc: &ParsedDocument, ctx: &RuleContext<'_>) -> Vec<Violation> {
         let opts: Options = ctx
             .options
@@ -79,9 +87,10 @@ impl Rule for NoPromptInjectionMarkerRule {
                     AIL200,
                     self.default_severity(),
                     doc.path.clone(),
-                    format!("possible prompt-injection marker: '{}'", matched),
+                    "prompt-injection marker",
                 )
-                .at(line, 1);
+                .at(line, 1)
+                .with_detail(matched);
                 v.snippet = Some(line_containing(&doc.raw, m.start()));
                 out.push(v);
             }
