@@ -27,7 +27,9 @@ adds Claude-specific tips.
   branch → full validation → PR → green CI → squash merge. Never commit
   to `main`.
 - Version bumps and tags follow
-  [AGENTS.md](AGENTS.md#releases-and-versioning).
+  [AGENTS.md](AGENTS.md#releases-and-versioning); the full release
+  procedure is in [RELEASING.md](RELEASING.md). Every release is
+  `scripts/release.sh X.Y.Z` — do not improvise.
 
 ## Constraints inherited from AGENTS.md
 

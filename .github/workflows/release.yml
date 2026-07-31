@@ -1,5 +1,9 @@
 name: Release
 
+# Triggered exclusively by pushing a v* tag. This workflow is the single
+# authoritative release run — it validates the tag commit, builds all
+# target binaries, and publishes to every distribution channel.
+# See RELEASING.md.
 on:
   push:
     tags:
@@ -12,8 +16,32 @@ permissions:
   attestations: write
 
 jobs:
+  test:
+    name: test (${{ matrix.os }})
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      CARGO_TERM_COLOR: always
+      RUSTFLAGS: "-D warnings"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: cargo fmt --check
+        run: cargo fmt --all -- --check
+      - name: cargo clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: cargo test
+        run: cargo test --workspace --all-features
+
   build:
     name: build ${{ matrix.target }}
+    needs: test
     strategy:
       fail-fast: false
       matrix:
@@ -130,6 +158,7 @@ jobs:
 
   publish-docker:
     name: publish GHCR image
+    needs: test
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
     steps:
@@ -153,30 +182,8 @@ jobs:
           build-args: |
             GIT_SHA=${{ github.sha }}
 
-  update-homebrew-formula:
-    name: update Homebrew formula
-    needs: release
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: main
-      - name: Update formula url and sha256
-        run: |
-          set -euo pipefail
-          TAG="${GITHUB_REF_NAME}"
-          URL="https://github.com/${GITHUB_REPOSITORY}/archive/refs/tags/${TAG}.tar.gz"
-          SHA=$(curl -fsSL "${URL}" | sha256sum | cut -d' ' -f1)
-          sed -i -E "s|archive/refs/tags/v[0-9][0-9.]*\.tar\.gz|archive/refs/tags/${TAG}.tar.gz|" Formula/ailint.rb
-          sed -i -E "s|^  sha256 \"[0-9a-f]+\"|  sha256 \"${SHA}\"|" Formula/ailint.rb
-      - name: Commit formula
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add Formula/ailint.rb
-          git diff --cached --quiet || git commit -m "chore: update Homebrew formula for ${GITHUB_REF_NAME}"
-          git push origin main
+  # NOTE: The Homebrew formula update is intentionally NOT part of this
+  # workflow. It runs from scripts/release.sh on the release author's
+  # machine after this workflow succeeds, which avoids the need for a
+  # bot token that can bypass the main-branch ruleset.
+  # See RELEASING.md.
