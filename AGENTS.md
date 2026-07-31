@@ -113,6 +113,70 @@ When you add a config knob, update
 [crates/ailint-cli/.ailint.yaml.template](crates/ailint-cli/.ailint.yaml.template)
 in the same PR.
 
+## Change workflow
+
+`main` is protected by a repository ruleset: no direct pushes, squash
+merges only, CI must pass. All changes — including changes made by AI
+agents — follow this sequence:
+
+1. Create a feature branch off `main` (`feat/…`, `fix/…`, `docs/…`,
+   `chore/…`).
+2. Make the change. Edit files with editor tools, not shell heredocs
+   or `sed`.
+3. Run the full validation suite (see [PR checklist](#pr-checklist)).
+   Run it on the whole workspace, not just the crate you touched.
+4. Commit on the branch and push the branch.
+5. Open a PR and wait for the three CI checks (`test (ubuntu-latest)`,
+   `test (macos-latest)`, `test (windows-latest)`) to pass.
+6. Squash-merge. Do not use the admin bypass to merge before CI is green.
+
+Never commit directly to `main`, even locally. If you have already
+committed to local `main`, move the commit to a branch before pushing:
+
+```bash
+git branch feat/my-change
+git reset --hard origin/main
+git switch feat/my-change
+```
+
+A change is not done when the code compiles. It is done when the PR is
+open with green CI, or the user has explicitly said to stop earlier.
+Report unpushed or unmerged work as unfinished.
+
+### One task, one PR
+
+A user request is one unit of work and lands as **one PR**, even when it
+touches docs, code, and tests together.
+
+- Do not split one task across multiple PRs. Interdependent PRs that
+  cannot merge independently are never acceptable.
+- If more work surfaces mid-task (a CI failure, a review finding, a
+  missed file), add commits to the existing PR branch. Do not open a
+  second PR.
+- Open a separate PR only when the user explicitly asks for the work to
+  be split.
+
+## Releases and versioning
+
+Releases are tag-driven: pushing `v{X.Y.Z}` runs `release.yml`, which
+builds binaries, publishes to crates.io, npm, and ghcr.io, and creates
+the GitHub Release. A merged PR alone releases nothing.
+
+- Decide the semver bump by the user-visible effect: bug fix → patch,
+  new or changed output / flags / rules → minor, breaking CLI or config
+  change → major. Changed terminal output counts as minor.
+- Bump the version in every workspace `Cargo.toml` and
+  [npm/package.json](npm/package.json) in the same PR as the change, or
+  in a dedicated release PR. Versions must match across all three crates
+  and npm.
+- Before tagging, dry-run publish **all** crates:
+  `cargo publish --dry-run -p ailint-core -p ailint-llm -p ailint-cli`.
+  The tag snapshots the workflow — a broken tag cannot be re-run.
+- Tag the merge commit on `main`, never a local commit:
+  `git tag v{X.Y.Z} && git push origin v{X.Y.Z}`.
+- Never run `cargo publish` (non-dry-run), `npm publish`, or
+  `git push --tags` without explicit user confirmation.
+
 ## PR checklist
 
 Before opening a PR:
@@ -125,6 +189,11 @@ Before opening a PR:
 - [ ] New rules have both a positive and a negative fixture
 - [ ] No new `.unwrap()` / `.expect()` in library code
 - [ ] No committed secrets, API keys, or `.env` files
+- [ ] Reporter output changes update the affected snapshots under
+      `crates/ailint-core/tests/snapshots/` and the examples in
+      [README.md](README.md) if they show that output
+- [ ] User-visible behavior changes state the intended semver bump in
+      the PR description
 
 ## What not to do
 
@@ -134,3 +203,7 @@ Before opening a PR:
   detection branch only when there's a real tool convention to match.
 - Don't silently swallow errors in the CLI. Surface them via `anyhow`
   and let the top level format them.
+- Don't commit to `main` or declare work done with unpushed commits —
+  follow the [change workflow](#change-workflow).
+- Don't tag a release without the dry-run publish check in
+  [Releases and versioning](#releases-and-versioning).

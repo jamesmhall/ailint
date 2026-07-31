@@ -23,6 +23,11 @@ adds Claude-specific tips.
 - Do not run `cargo publish`, `cargo yank`, or any `git push` command
   without explicit user confirmation.
 - Do not modify `Cargo.lock` by hand; let `cargo` update it.
+- Follow the [change workflow](AGENTS.md#change-workflow): feature
+  branch → full validation → PR → green CI → squash merge. Never commit
+  to `main`.
+- Version bumps and tags follow
+  [AGENTS.md](AGENTS.md#releases-and-versioning).
 
 ## Constraints inherited from AGENTS.md
 

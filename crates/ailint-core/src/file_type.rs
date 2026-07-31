@@ -51,7 +51,8 @@ impl FileType {
     /// Best-effort detection based on file path.
     pub fn detect(path: &Path) -> Option<Self> {
         let name = path.file_name()?.to_str()?;
-        let path_str = path.to_string_lossy();
+        // Normalize separators so path-based matches work on Windows.
+        let path_str = path.to_string_lossy().replace('\\', "/");
         let name_lower = name.to_ascii_lowercase();
 
         // Exact-name matches first.
@@ -253,6 +254,17 @@ mod tests {
         );
         assert_eq!(
             FileType::detect(Path::new("/repo/.github/skills/example/nested/SKILL.md")),
+            Some(FileType::GitHubSkill)
+        );
+    }
+
+    // Backslashes are separators only on Windows; on Unix this path is a
+    // single filename and the test would be meaningless.
+    #[cfg(windows)]
+    #[test]
+    fn detects_github_skills_with_windows_separators() {
+        assert_eq!(
+            FileType::detect(Path::new(r"repo\.github\skills\example\SKILL.md")),
             Some(FileType::GitHubSkill)
         );
     }
