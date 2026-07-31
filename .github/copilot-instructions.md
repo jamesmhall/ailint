@@ -35,6 +35,17 @@ cargo run -p ailint-cli -- check .
 
 All five must pass before a PR is opened.
 
+## Change workflow
+
+- Never commit to `main`. Every change goes on a feature branch, through
+  a PR, and squash-merges after the three CI checks pass. See
+  [AGENTS.md](../AGENTS.md#change-workflow).
+- Work is not done until the PR is open with green CI. Report unpushed
+  commits as unfinished.
+- Releases are tag-driven and follow
+  [AGENTS.md](../AGENTS.md#releases-and-versioning): user-visible
+  changes need a semver bump across all crates and npm before tagging.
+
 ## What not to suggest
 
 - Do not suggest `.unwrap()` in library code.
