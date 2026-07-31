@@ -29,6 +29,14 @@ impl Rule for ExcessiveRuleLengthRule {
         Severity::Warning
     }
 
+    fn description(&self) -> &'static str {
+        "Rule item is longer than the configured word budget."
+    }
+
+    fn fix_hint(&self) -> &'static str {
+        "Split into smaller focused rules, or move detail to a sub-list."
+    }
+
     fn run(&self, doc: &ParsedDocument, ctx: &RuleContext<'_>) -> Vec<Violation> {
         let md = match &doc.content {
             DocumentContent::Markdown(m) => m,
@@ -46,15 +54,14 @@ impl Rule for ExcessiveRuleLengthRule {
             if count <= max_words {
                 continue;
             }
-            let mut v = Violation::new(
+            let v = Violation::new(
                 AIL102,
                 self.default_severity(),
                 doc.path.clone(),
-                format!("rule exceeds {} words ({} words)", max_words, count),
+                format!("rule exceeds {} words", max_words),
             )
-            .at(item.line, 1);
-            v.fix_hint =
-                Some("split into multiple smaller rules or move detail to a sub-list".into());
+            .at(item.line, 1)
+            .with_detail(format!("{} words", count));
             out.push(v);
         }
         out

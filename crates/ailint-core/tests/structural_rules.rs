@@ -18,7 +18,6 @@ fn ail001_fires_on_invalid_frontmatter() {
     let hits: Vec<_> = violations.iter().filter(|v| v.rule_id.code == 1).collect();
     assert_eq!(hits.len(), 1, "expected one AIL001, got {violations:?}");
     assert!(hits[0].message.starts_with("invalid YAML frontmatter"));
-    assert!(hits[0].fix_hint.is_some());
 }
 
 #[test]
@@ -45,7 +44,7 @@ fn ail003_fires_when_required_section_missing() {
     let violations = lint(&path, &cfg).unwrap();
     let hits: Vec<_> = violations.iter().filter(|v| v.rule_id.code == 3).collect();
     assert_eq!(hits.len(), 1, "expected one AIL003, got {violations:?}");
-    assert!(hits[0].message.contains("Setup"));
+    assert_eq!(hits[0].detail.as_deref(), Some("Setup"));
 }
 
 #[test]
@@ -63,8 +62,11 @@ fn ail040_fires_on_broken_link() {
     let violations = lint(&path, &Config::default()).unwrap();
     let hits: Vec<_> = violations.iter().filter(|v| v.rule_id.code == 40).collect();
     assert_eq!(hits.len(), 1, "expected one AIL040, got {violations:?}");
-    assert!(hits[0].message.contains("does-not-exist.md"));
-    assert!(hits[0].fix_hint.is_some());
+    assert!(hits[0]
+        .detail
+        .as_deref()
+        .unwrap_or("")
+        .contains("does-not-exist.md"));
 }
 
 #[test]
@@ -86,6 +88,7 @@ fn ail041_fires_on_malformed_yaml() {
     let hits: Vec<_> = violations.iter().filter(|v| v.rule_id.code == 41).collect();
     assert_eq!(hits.len(), 1, "expected one AIL041, got {violations:?}");
     assert!(hits[0].message.contains("parse error"));
+    assert!(hits[0].detail.is_some());
 }
 
 #[test]

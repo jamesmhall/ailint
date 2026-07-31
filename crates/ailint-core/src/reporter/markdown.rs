@@ -6,6 +6,7 @@ use std::io::Write;
 use anyhow::Result;
 
 use crate::reporter::Reporter;
+use crate::rules::registry::rule_meta;
 use crate::rules::{Severity, Violation};
 
 const RULE_DOC_BASE: &str = "https://github.com/jamesmhall/ailint";
@@ -74,8 +75,8 @@ impl Reporter for MarkdownReporter {
             file_violations.sort_by_key(|v| v.line.unwrap_or(0));
             writeln!(out, "## `{}`", path.display())?;
             writeln!(out)?;
-            writeln!(out, "| Rule | Severity | Line | Message |")?;
-            writeln!(out, "|------|----------|-----:|---------|")?;
+            writeln!(out, "| Rule | Severity | Line | Message | Detail | Fix |")?;
+            writeln!(out, "|------|----------|-----:|---------|--------|-----|")?;
             for v in file_violations {
                 let sev = v.severity.as_str();
                 let badge_color = match v.severity {
@@ -86,15 +87,20 @@ impl Reporter for MarkdownReporter {
                 let badge_url = format!("https://img.shields.io/badge/-{}-{}", sev, badge_color);
                 let doc_url = format!("{}#{}", RULE_DOC_BASE, v.rule_id.slug);
                 let line = v.line.map(|n| n.to_string()).unwrap_or_default();
+                let meta = rule_meta(v.rule_id);
+                let fix = meta.map(|m| m.fix_hint).unwrap_or("");
+                let detail = v.detail.as_deref().unwrap_or("");
                 writeln!(
                     out,
-                    "| [![{sev}]({badge_url})]({doc_url}) `{code}` | {sev} | {line} | {msg} |",
+                    "| [![{sev}]({badge_url})]({doc_url}) `{code}` | {sev} | {line} | {msg} | {detail} | {fix} |",
                     sev = sev,
                     badge_url = badge_url,
                     doc_url = doc_url,
                     code = v.rule_id.code_str(),
                     line = line,
                     msg = escape_message(&v.message),
+                    detail = escape_message(detail),
+                    fix = escape_message(fix),
                 )?;
             }
             writeln!(out)?;

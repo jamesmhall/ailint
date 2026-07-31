@@ -3,7 +3,7 @@ source: crates/ailint-core/tests/reporter_json.rs
 expression: "String::from_utf8(buf).unwrap()"
 ---
 {
-  "schema_version": "1",
+  "schema_version": "2",
   "tool": {
     "name": "ailint",
     "version": "1.0.1"
@@ -30,10 +30,13 @@ expression: "String::from_utf8(buf).unwrap()"
     {
       "rule": {
         "code": "AIL200",
-        "slug": "no-prompt-injection-marker"
+        "slug": "no-prompt-injection-marker",
+        "description": "Guidance file contains a phrase commonly used to override system prompts.",
+        "fix_hint": "Remove the marker; injected content could exploit it."
       },
       "severity": "error",
       "message": "possible prompt-injection marker: '<system>'",
+      "detail": null,
       "file": "crates/ailint-core/tests/fixtures/AGENTS.md",
       "line": 6,
       "column": 1,
@@ -44,10 +47,13 @@ expression: "String::from_utf8(buf).unwrap()"
     {
       "rule": {
         "code": "AIL100",
-        "slug": "no-vague-instruction"
+        "slug": "no-vague-instruction",
+        "description": "List item contains vague, unactionable phrasing.",
+        "fix_hint": "Replace with a concrete verb and target the agent can act on."
       },
       "severity": "warning",
       "message": "vague instruction: 'be helpful'",
+      "detail": null,
       "file": "crates/ailint-core/tests/fixtures/AGENTS.md",
       "line": 12,
       "column": 3,
@@ -58,10 +64,13 @@ expression: "String::from_utf8(buf).unwrap()"
     {
       "rule": {
         "code": "AIL002",
-        "slug": "instructions-file-empty"
+        "slug": "instructions-file-empty",
+        "description": "Guidance file is empty or whitespace-only.",
+        "fix_hint": "Add content, or delete the file."
       },
       "severity": "info",
       "message": "file has no non-whitespace content",
+      "detail": null,
       "file": "crates/ailint-core/tests/fixtures/CLAUDE.md",
       "line": null,
       "column": null,

@@ -18,6 +18,14 @@ impl BatchRule for FiresOnceRule {
         Severity::Info
     }
 
+    fn description(&self) -> &'static str {
+        "Test batch rule that fires once."
+    }
+
+    fn fix_hint(&self) -> &'static str {
+        "Do nothing; this is a test rule."
+    }
+
     fn run_batch(&self, docs: &[ParsedDocument], _ctx: &RuleContext<'_>) -> Vec<Violation> {
         let file = docs
             .first()

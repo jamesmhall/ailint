@@ -20,6 +20,14 @@ impl Rule for MalformedYamlRule {
         Severity::Error
     }
 
+    fn description(&self) -> &'static str {
+        "YAML file failed to parse."
+    }
+
+    fn fix_hint(&self) -> &'static str {
+        "Fix the YAML syntax error at the reported location."
+    }
+
     /// Applies to any file we treat as YAML, guidance or generic.
     fn applies_to(&self, file_type: FileType) -> bool {
         matches!(
@@ -39,14 +47,14 @@ impl Rule for MalformedYamlRule {
             _ => return Vec::new(),
         };
         let (line, column) = extract_location(msg).unwrap_or((1, 1));
-        let mut v = Violation::new(
+        let v = Violation::new(
             AIL041,
             self.default_severity(),
             doc.path.clone(),
-            format!("YAML/JSON parse error: {msg}"),
+            "YAML/JSON parse error",
         )
-        .at(line, column);
-        v.fix_hint = Some("fix the YAML/JSON syntax error at the reported location".to_string());
+        .at(line, column)
+        .with_detail(msg.clone());
         vec![v]
     }
 }

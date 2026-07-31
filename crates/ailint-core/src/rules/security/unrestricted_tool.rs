@@ -33,6 +33,14 @@ impl Rule for NoUnrestrictedToolGrantRule {
         Severity::Warning
     }
 
+    fn description(&self) -> &'static str {
+        "File grants a tool or permission without scoping."
+    }
+
+    fn fix_hint(&self) -> &'static str {
+        "Scope the grant to specific tools, paths, or actions instead of blanket access."
+    }
+
     fn run(&self, doc: &ParsedDocument, ctx: &RuleContext<'_>) -> Vec<Violation> {
         let opts: Options = ctx
             .options
@@ -76,17 +84,14 @@ impl Rule for NoUnrestrictedToolGrantRule {
             for m in re.find_iter(&doc.raw) {
                 let line = line_of_offset(&doc.raw, m.start());
                 let matched = truncate_chars(m.as_str(), 60);
-                let mut v = Violation::new(
+                let v = Violation::new(
                     AIL201,
                     self.default_severity(),
                     doc.path.clone(),
-                    format!("unrestricted tool/permission grant: '{}'", matched),
+                    "unrestricted tool/permission grant",
                 )
-                .at(line, 1);
-                v.fix_hint = Some(
-                    "scope tool access explicitly (list allowed tools or commands) rather than granting blanket access"
-                        .to_string(),
-                );
+                .at(line, 1)
+                .with_detail(matched);
                 out.push(v);
             }
         }

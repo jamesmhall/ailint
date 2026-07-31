@@ -19,6 +19,14 @@ impl Rule for ToolConfirmationRequiredRule {
         Severity::Error
     }
 
+    fn description(&self) -> &'static str {
+        "File describes destructive actions but has no confirmation constraint."
+    }
+
+    fn fix_hint(&self) -> &'static str {
+        "Require explicit confirmation (\"wait for human confirmation\") before destructive actions."
+    }
+
     fn run(&self, doc: &ParsedDocument, ctx: &RuleContext<'_>) -> Vec<Violation> {
         match &doc.content {
             DocumentContent::Markdown(_) | DocumentContent::Text => {}
@@ -50,13 +58,14 @@ impl Rule for ToolConfirmationRequiredRule {
             if let Some(idx) = lower_raw.find(d) {
                 if !confirmation_phrases.iter().any(|c| lower_raw.contains(c)) {
                     let line = line_of_offset(&doc.raw, idx);
-                    let mut v = Violation::new(
+                    let v = Violation::new(
                         AIL203,
                         ctx.severity,
                         doc.path.clone(),
-                        format!("Document describes destructive actions ('{}') but lacks confirmation constraints.", d),
-                    ).at(line, 1);
-                    v.fix_hint = Some("Include explicit phrasing like 'wait for human confirmation' or 'ask for permission' before destructive actions.".to_string());
+                        "destructive action without confirmation constraint",
+                    )
+                    .at(line, 1)
+                    .with_detail((*d).to_string());
                     violations.push(v);
 
                     break;

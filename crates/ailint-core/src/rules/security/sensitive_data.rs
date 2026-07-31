@@ -51,6 +51,14 @@ impl Rule for NoSensitiveDataInInstructionsRule {
         Severity::Error
     }
 
+    fn description(&self) -> &'static str {
+        "Guidance file appears to contain an embedded secret or API key."
+    }
+
+    fn fix_hint(&self) -> &'static str {
+        "Move the credential to an env var (e.g. AILINT_LLM_API_KEY) or a secret store."
+    }
+
     fn run(&self, doc: &ParsedDocument, _ctx: &RuleContext<'_>) -> Vec<Violation> {
         let matchers = matchers();
         let indices: Vec<usize> = match &matchers.set {
@@ -65,17 +73,13 @@ impl Rule for NoSensitiveDataInInstructionsRule {
                     continue;
                 }
                 let line = line_of_offset(&doc.raw, m.start());
-                let mut v = Violation::new(
+                let v = Violation::new(
                     AIL202,
                     self.default_severity(),
                     doc.path.clone(),
-                    "possible embedded secret / API key detected",
+                    "possible embedded secret",
                 )
                 .at(line, 1);
-                v.fix_hint = Some(
-                    "remove the credential and reference an env var like AILINT_LLM_API_KEY instead"
-                        .to_string(),
-                );
                 out.push(v);
             }
         }

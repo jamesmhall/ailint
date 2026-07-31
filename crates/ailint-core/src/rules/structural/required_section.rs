@@ -31,6 +31,14 @@ impl Rule for MissingRequiredSectionRule {
         Severity::Warning
     }
 
+    fn description(&self) -> &'static str {
+        "Required top-level heading is not present."
+    }
+
+    fn fix_hint(&self) -> &'static str {
+        "Add a top-level heading that matches the required section name."
+    }
+
     fn run(&self, doc: &ParsedDocument, ctx: &RuleContext<'_>) -> Vec<Violation> {
         let DocumentContent::Markdown(md) = &doc.content else {
             return Vec::new();
@@ -63,14 +71,13 @@ impl Rule for MissingRequiredSectionRule {
             if top_headings.iter().any(|h| h.contains(&needle)) {
                 continue;
             }
-            let mut v = Violation::new(
+            let v = Violation::new(
                 AIL003,
                 self.default_severity(),
                 doc.path.clone(),
-                format!("missing required section: '{entry}'"),
+                "missing required section",
             )
-            .at(1, 1);
-            v.fix_hint = Some(format!("add a top-level heading containing '{entry}'"));
+            .with_detail(entry);
             out.push(v);
         }
         out

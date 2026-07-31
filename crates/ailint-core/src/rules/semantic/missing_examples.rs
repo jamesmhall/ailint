@@ -31,6 +31,14 @@ impl Rule for NoMissingExamplesRule {
         Severity::Info
     }
 
+    fn description(&self) -> &'static str {
+        "Behavioral section is missing a concrete example."
+    }
+
+    fn fix_hint(&self) -> &'static str {
+        "Add a fenced code block or an `e.g.` clause with a concrete example."
+    }
+
     fn run(&self, doc: &ParsedDocument, ctx: &RuleContext<'_>) -> Vec<Violation> {
         let md = match &doc.content {
             DocumentContent::Markdown(m) => m,
@@ -81,15 +89,14 @@ impl Rule for NoMissingExamplesRule {
             if has_code || has_eg {
                 continue;
             }
-            let mut v = Violation::new(
+            let v = Violation::new(
                 AIL101,
                 self.default_severity(),
                 doc.path.clone(),
-                format!("section '{}' lacks concrete examples", heading.text),
+                "section lacks concrete examples",
             )
-            .at(heading.line, 1);
-            v.fix_hint =
-                Some("add a fenced code block or an `e.g.` clause with a concrete example".into());
+            .at(heading.line, 1)
+            .with_detail(heading.text.clone());
             out.push(v);
         }
         out

@@ -19,6 +19,14 @@ impl Rule for NegativeConstraintOverloadRule {
         Severity::Warning
     }
 
+    fn description(&self) -> &'static str {
+        "List is dominated by negative constraints; LLMs perform better with affirmative phrasing."
+    }
+
+    fn fix_hint(&self) -> &'static str {
+        "Rewrite as positive directives (\"Do X\" over \"Don't Y\")."
+    }
+
     fn run(&self, doc: &ParsedDocument, ctx: &RuleContext<'_>) -> Vec<Violation> {
         let md = match &doc.content {
             DocumentContent::Markdown(m) => m,
@@ -47,17 +55,17 @@ impl Rule for NegativeConstraintOverloadRule {
         }
 
         if negative_count > md.list_items.len() / 2 {
-            let mut v = Violation::new(
+            let v = Violation::new(
                 AIL104,
                 ctx.severity,
                 doc.path.clone(),
-                format!(
-                    "Negative constraint overload: {} out of {} list items are negative constraints. LLMs perform better with affirmative instruction phrasing.",
-                    negative_count,
-                    md.list_items.len()
-                ),
-            );
-            v.fix_hint = Some("Refactor constraints to state what the agent *should* do, rather than exhaustive lists of prohibitions.".to_string());
+                "list dominated by negative constraints",
+            )
+            .with_detail(format!(
+                "{} of {} items are negative",
+                negative_count,
+                md.list_items.len()
+            ));
             vec![v]
         } else {
             Vec::new()
