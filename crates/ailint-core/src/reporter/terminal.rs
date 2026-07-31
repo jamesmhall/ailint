@@ -11,10 +11,8 @@ use crate::reporter::Reporter;
 use crate::rules::{Severity, Violation};
 
 const MESSAGE_WIDTH: usize = 60;
-const SEVERITY_WIDTH: usize = 7;
-const POSITION_WIDTH: usize = 5;
 
-/// Renders violations as an aligned, optionally colored table.
+/// Renders violations grouped by rule as an aligned, optionally colored table.
 #[derive(Debug, Clone, Default)]
 pub struct TerminalReporter {
     color: ColorMode,
@@ -44,64 +42,93 @@ impl Reporter for TerminalReporter {
 
         let color_on = self.color_on();
 
-        let mut by_file: BTreeMap<String, Vec<&Violation>> = BTreeMap::new();
+        let mut by_rule: BTreeMap<String, Vec<&Violation>> = BTreeMap::new();
+        let mut max_path_len = 0;
+
         for v in violations {
-            by_file
-                .entry(v.file.display().to_string())
-                .or_default()
-                .push(v);
+            let rule = format!("{}/{}", v.rule_id.code_str(), v.rule_id.slug);
+            by_rule.entry(rule).or_default().push(v);
+
+            let pos_len = match (v.line, v.column) {
+                (Some(l), Some(c)) => l.to_string().len() + c.to_string().len() + 2,
+                (Some(l), None) => l.to_string().len() + 1,
+                _ => 0,
+            };
+            let path_len = v.file.display().to_string().chars().count() + pos_len;
+            if path_len > max_path_len {
+                max_path_len = path_len;
+            }
         }
 
-        // Message column widens to the longest truncated message across the batch.
-        let max_msg_len = violations
-            .iter()
-            .map(|v| truncate_chars(&v.message, MESSAGE_WIDTH).chars().count())
-            .max()
-            .unwrap_or(0);
+        let path_pad = max_path_len.clamp(20, 60);
 
         let mut first_group = true;
-        for (path, mut items) in by_file {
-            items.sort_by_key(|v| (v.line.unwrap_or(0), v.column.unwrap_or(0)));
+        for (rule, mut items) in by_rule {
+            items.sort_by(|a, b| {
+                a.file
+                    .cmp(&b.file)
+                    .then(a.line.unwrap_or(0).cmp(&b.line.unwrap_or(0)))
+                    .then(a.column.unwrap_or(0).cmp(&b.column.unwrap_or(0)))
+            });
 
             if !first_group {
                 writeln!(out)?;
             }
             first_group = false;
 
-            if color_on {
-                writeln!(out, "{}", path.underline())?;
+            let sev = items[0].severity;
+
+            let rule_colored = if color_on {
+                rule.bold().to_string()
             } else {
-                writeln!(out, "{path}")?;
-            }
+                rule.clone()
+            };
+
+            let sev_colored = if color_on {
+                match sev {
+                    Severity::Error => sev.as_str().red().bold().to_string(),
+                    Severity::Warning => sev.as_str().yellow().bold().to_string(),
+                    Severity::Info => sev.as_str().cyan().to_string(),
+                }
+            } else {
+                sev.as_str().to_string()
+            };
+
+            let glyph = if color_on {
+                match sev {
+                    Severity::Error | Severity::Warning => "✖".red().to_string(),
+                    Severity::Info => "ℹ".cyan().to_string(),
+                }
+            } else {
+                match sev {
+                    Severity::Error | Severity::Warning => "x".to_string(),
+                    Severity::Info => "i".to_string(),
+                }
+            };
+
+            writeln!(out, "{} {} ({})", glyph, rule_colored, sev_colored)?;
 
             for v in items {
-                let line = v.line.unwrap_or(0);
-                let col = v.column.unwrap_or(0);
-                let pos = format!("{line}:{col}");
-                let pos_col = pad_left(&pos, POSITION_WIDTH);
+                let pos = match (v.line, v.column) {
+                    (Some(l), Some(c)) => format!(":{}:{}", l, c),
+                    (Some(l), None) => format!(":{}", l),
+                    _ => String::new(),
+                };
 
-                let sev_padded = pad_right(v.severity.as_str(), SEVERITY_WIDTH);
-                let sev_col = if color_on {
-                    match v.severity {
-                        Severity::Error => sev_padded.red().bold().to_string(),
-                        Severity::Warning => sev_padded.yellow().bold().to_string(),
-                        Severity::Info => sev_padded.cyan().to_string(),
-                    }
+                let path_str = format!("{}{}", v.file.display(), pos);
+                let path_colored = if color_on {
+                    path_str.dimmed().to_string()
                 } else {
-                    sev_padded
+                    path_str.clone()
                 };
 
                 let msg = truncate_chars(&v.message, MESSAGE_WIDTH);
-                let msg_col = pad_right(&msg, max_msg_len);
 
-                let rule = format!("{}/{}", v.rule_id.code_str(), v.rule_id.slug);
-                let rule_col = if color_on {
-                    rule.dimmed().to_string()
-                } else {
-                    rule
-                };
+                let visual_len = path_str.chars().count();
+                let pad_len = path_pad.saturating_sub(visual_len);
+                let spaces = " ".repeat(pad_len);
 
-                writeln!(out, "{pos_col}  {sev_col} {msg_col}  {rule_col}")?;
+                writeln!(out, "  {}{}  {}", path_colored, spaces, msg)?;
             }
         }
 
@@ -149,30 +176,5 @@ fn truncate_chars(s: &str, max: usize) -> String {
     let keep = max.saturating_sub(1);
     let mut out: String = s.chars().take(keep).collect();
     out.push('…');
-    out
-}
-
-fn pad_right(s: &str, width: usize) -> String {
-    let count = s.chars().count();
-    if count >= width {
-        return s.to_string();
-    }
-    let mut out = String::from(s);
-    for _ in 0..(width - count) {
-        out.push(' ');
-    }
-    out
-}
-
-fn pad_left(s: &str, width: usize) -> String {
-    let count = s.chars().count();
-    if count >= width {
-        return s.to_string();
-    }
-    let mut out = String::with_capacity(width);
-    for _ in 0..(width - count) {
-        out.push(' ');
-    }
-    out.push_str(s);
     out
 }

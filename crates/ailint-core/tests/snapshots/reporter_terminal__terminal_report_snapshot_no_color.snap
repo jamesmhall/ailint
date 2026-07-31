@@ -1,13 +1,15 @@
 ---
 source: crates/ailint-core/tests/reporter_terminal.rs
-assertion_line: 40
+assertion_line: 42
 expression: out
 ---
-crates/ailint-core/tests/fixtures/security/prompt_injection/bad/AGENTS.md
-  6:1  error   possible prompt-injection marker: 'Ignore previous instruct…  AIL200/no-prompt-injection-marker
+x AIL100/no-vague-instruction (warning)
+  crates/ailint-core/tests/fixtures/semantic/vague/bad/AGENTS.md:3:1  vague instruction: 'do the right thing'
 
-crates/ailint-core/tests/fixtures/semantic/vague/bad/AGENTS.md
-  3:1  warning vague instruction: 'do the right thing'                       AIL100/no-vague-instruction
-  5:1  info    duplicate of rule at line 3                                   AIL103/no-duplicate-rules
+i AIL103/no-duplicate-rules (info)
+  crates/ailint-core/tests/fixtures/semantic/vague/bad/AGENTS.md:5:1  duplicate of rule at line 3
+
+x AIL200/no-prompt-injection-marker (error)
+  crates/ailint-core/tests/fixtures/security/prompt_injection/bad/AGENTS.md:6:1  possible prompt-injection marker: 'Ignore previous instruct…
 
 x 3 violations (1 error, 1 warning, 1 info)
