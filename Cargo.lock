@@ -23,7 +23,7 @@ dependencies = [
 
 [[package]]
 name = "ailint-cli"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "ailint-core",
  "ailint-llm",
@@ -42,7 +42,7 @@ dependencies = [
 
 [[package]]
 name = "ailint-core"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "aho-corasick",
  "anyhow",
@@ -66,7 +66,7 @@ dependencies = [
 
 [[package]]
 name = "ailint-llm"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "ailint-core",
  "anyhow",
