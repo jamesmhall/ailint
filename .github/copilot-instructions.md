@@ -40,6 +40,8 @@ All five must pass before a PR is opened.
 - Never commit to `main`. Every change goes on a feature branch, through
   a PR, and squash-merges after the three CI checks pass. See
   [AGENTS.md](../AGENTS.md#change-workflow).
+- One task = one PR. Push follow-up commits to the existing PR branch;
+  never split a task across multiple PRs.
 - Work is not done until the PR is open with green CI. Report unpushed
   commits as unfinished.
 - Releases are tag-driven and follow

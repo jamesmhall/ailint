@@ -143,6 +143,19 @@ A change is not done when the code compiles. It is done when the PR is
 open with green CI, or the user has explicitly said to stop earlier.
 Report unpushed or unmerged work as unfinished.
 
+### One task, one PR
+
+A user request is one unit of work and lands as **one PR**, even when it
+touches docs, code, and tests together.
+
+- Do not split one task across multiple PRs. Interdependent PRs that
+  cannot merge independently are never acceptable.
+- If more work surfaces mid-task (a CI failure, a review finding, a
+  missed file), add commits to the existing PR branch. Do not open a
+  second PR.
+- Open a separate PR only when the user explicitly asks for the work to
+  be split.
+
 ## Releases and versioning
 
 Releases are tag-driven: pushing `v{X.Y.Z}` runs `release.yml`, which
