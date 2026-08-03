@@ -158,24 +158,26 @@ touches docs, code, and tests together.
 
 ## Releases and versioning
 
-Releases are tag-driven: pushing `v{X.Y.Z}` runs `release.yml`, which
-builds binaries, publishes to crates.io, npm, and ghcr.io, and creates
-the GitHub Release. A merged PR alone releases nothing.
+The canonical release procedure lives in [RELEASING.md](RELEASING.md).
+Follow it exactly; do not improvise.
 
-- Decide the semver bump by the user-visible effect: bug fix → patch,
-  new or changed output / flags / rules → minor, breaking CLI or config
-  change → major. Changed terminal output counts as minor.
-- Bump the version in every workspace `Cargo.toml` and
-  [npm/package.json](npm/package.json) in the same PR as the change, or
-  in a dedicated release PR. Versions must match across all three crates
-  and npm.
-- Before tagging, dry-run publish **all** crates:
-  `cargo publish --dry-run -p ailint-core -p ailint-llm -p ailint-cli`.
-  The tag snapshots the workflow — a broken tag cannot be re-run.
-- Tag the merge commit on `main`, never a local commit:
-  `git tag v{X.Y.Z} && git push origin v{X.Y.Z}`.
-- Never run `cargo publish` (non-dry-run), `npm publish`, or
-  `git push --tags` without explicit user confirmation.
+Key rules that agents must not forget:
+
+- Every release is one command: `scripts/release.sh X.Y.Z` on `main`.
+  It bumps versions, validates, commits, pushes, tags, waits for the
+  Release workflow, and updates the Homebrew formula.
+- A release ships to five channels (crates.io, npm, ghcr.io, GitHub
+  Releases, Homebrew). A merged PR alone releases nothing — the tag is
+  what publishes.
+- Versions must match across `Cargo.toml` (workspace + internal dep
+  pins), `npm/package.json`, and the pre-commit example in
+  [README.md](README.md).
+- **Never** run `cargo publish` (non-dry-run), `npm publish`, or push
+  a `v*` tag without explicit user confirmation. A pushed tag cannot
+  be safely un-pushed.
+- Semver decision, expected workflow-run counts, and recovery
+  procedures for partial failures are all documented in
+  [RELEASING.md](RELEASING.md).
 
 ## PR checklist
 

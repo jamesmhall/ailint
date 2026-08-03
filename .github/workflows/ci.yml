@@ -1,8 +1,10 @@
 name: CI
 
+# CI is the PR gate. It intentionally does NOT run on push to main:
+#  - main is protected; merges come from PRs that already ran CI.
+#  - The Release workflow runs the same validation before publishing.
+# See RELEASING.md for the full release procedure.
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
 

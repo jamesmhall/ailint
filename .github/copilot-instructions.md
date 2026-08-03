@@ -45,8 +45,10 @@ All five must pass before a PR is opened.
 - Work is not done until the PR is open with green CI. Report unpushed
   commits as unfinished.
 - Releases are tag-driven and follow
-  [AGENTS.md](../AGENTS.md#releases-and-versioning): user-visible
-  changes need a semver bump across all crates and npm before tagging.
+  [AGENTS.md](../AGENTS.md#releases-and-versioning) and
+  [RELEASING.md](../RELEASING.md): every release is one command,
+  `scripts/release.sh X.Y.Z`, run from a clean `main`. Do not
+  hand-roll release steps.
 
 ## What not to suggest
 
