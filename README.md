@@ -132,10 +132,11 @@ Run `ailint list-rules` for the current full list.
 ### Source-code comment scanning (opt-in)
 
 Set `sources.enabled: true` to also lint AI-generated prose that leaks into
-`.rs`, `.ts`, `.js`, and `.py` files. Comments and docstrings are extracted
-by [`ailint-extractor`](crates/ailint-extractor/) and fed to the
-prose-oriented semantic rules (currently AIL100, AIL104, AIL106). Off by
-default: existing users see no behavior change.
+`.rs`, `.ts`, `.js`, `.py`, `.go`, `.java`, and `.cs` files. Comments and
+docstrings are extracted by [`ailint-extractor`](crates/ailint-extractor/) and
+fed to prose-oriented rules — currently AIL100, AIL104, AIL106 (semantic) and
+AIL200, AIL202 (security). Off by default: existing users see no behavior
+change.
 
 ## Workspace layout
 
@@ -145,7 +146,7 @@ The repository is structured to separate the core engine, LLM integrations, and 
 ailint/
 ├── crates/
 │   ├── ailint-core/       # discovery, parsing, rule engine, reporters
-│   ├── ailint-extractor/  # Logos-based comment extraction (Rust, TS, JS, Python)
+│   ├── ailint-extractor/  # Logos-based comment extraction (Rust, TS, JS, Python, Go, Java, C#)
 │   ├── ailint-llm/        # optional LLM analyzer + provider integrations
 │   └── ailint-cli/        # the `ailint` binary
 ├── action.yml             # GitHub Action

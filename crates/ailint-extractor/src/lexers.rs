@@ -257,3 +257,237 @@ pub(crate) fn py_comments(source: &str) -> Vec<RawComment> {
     }
     out
 }
+
+// -------- Go --------
+
+#[derive(Logos, Debug, PartialEq)]
+enum GoTok {
+    #[regex(r"//[^\n]*")]
+    LineComment,
+
+    #[token("/*", block_comment_go)]
+    BlockComment,
+
+    #[regex(r#""([^"\\\n]|\\.)*""#)]
+    String,
+
+    // Raw string literals: `…` — no escapes, may contain newlines.
+    #[token("`", raw_string_go)]
+    RawString,
+
+    // Rune literal: single-quoted character with optional escape.
+    #[regex(r"'([^'\\]|\\.)*'")]
+    Rune,
+}
+
+fn block_comment_go(lex: &mut Lexer<GoTok>) -> Option<()> {
+    let rem = lex.remainder();
+    let end = rem.find("*/")?;
+    lex.bump(end + 2);
+    Some(())
+}
+
+fn raw_string_go(lex: &mut Lexer<GoTok>) -> Option<()> {
+    let rem = lex.remainder();
+    let end = rem.find('`')?;
+    lex.bump(end + 1);
+    Some(())
+}
+
+pub(crate) fn go_comments(source: &str) -> Vec<RawComment> {
+    let mut out = Vec::new();
+    let mut lex = GoTok::lexer(source);
+    while let Some(tok) = lex.next() {
+        match tok {
+            Ok(GoTok::LineComment) => {
+                let span = lex.span();
+                out.push(RawComment {
+                    raw: source[span.clone()].to_string(),
+                    kind: CommentKind::Line,
+                    byte_range: span,
+                });
+            }
+            Ok(GoTok::BlockComment) => {
+                let span = lex.span();
+                out.push(RawComment {
+                    raw: source[span.clone()].to_string(),
+                    kind: CommentKind::Block,
+                    byte_range: span,
+                });
+            }
+            _ => {}
+        }
+    }
+    out
+}
+
+// -------- Java --------
+
+#[derive(Logos, Debug, PartialEq)]
+enum JavaTok {
+    #[regex(r"//[^\n]*")]
+    LineComment,
+
+    #[token("/*", block_comment_java)]
+    BlockComment,
+
+    // Text blocks come before regular strings so they win on length.
+    #[token("\"\"\"", text_block_java)]
+    TextBlock,
+
+    #[regex(r#""([^"\\\n]|\\.)*""#)]
+    String,
+
+    #[regex(r"'([^'\\]|\\.)'")]
+    Char,
+}
+
+fn block_comment_java(lex: &mut Lexer<JavaTok>) -> Option<()> {
+    let rem = lex.remainder();
+    let end = rem.find("*/")?;
+    lex.bump(end + 2);
+    Some(())
+}
+
+fn text_block_java(lex: &mut Lexer<JavaTok>) -> Option<()> {
+    let rem = lex.remainder();
+    let end = rem.find("\"\"\"")?;
+    lex.bump(end + 3);
+    Some(())
+}
+
+pub(crate) fn java_comments(source: &str) -> Vec<RawComment> {
+    let mut out = Vec::new();
+    let mut lex = JavaTok::lexer(source);
+    while let Some(tok) = lex.next() {
+        match tok {
+            Ok(JavaTok::LineComment) => {
+                let span = lex.span();
+                out.push(RawComment {
+                    raw: source[span.clone()].to_string(),
+                    kind: CommentKind::Line,
+                    byte_range: span,
+                });
+            }
+            Ok(JavaTok::BlockComment) => {
+                let span = lex.span();
+                let raw = source[span.clone()].to_string();
+                let kind = if raw.starts_with("/**") && !raw.starts_with("/***") && raw != "/**/" {
+                    CommentKind::Doc
+                } else {
+                    CommentKind::Block
+                };
+                out.push(RawComment {
+                    raw,
+                    kind,
+                    byte_range: span,
+                });
+            }
+            _ => {}
+        }
+    }
+    out
+}
+
+// -------- C# --------
+
+#[derive(Logos, Debug, PartialEq)]
+enum CsTok {
+    #[regex(r"//[^\n]*")]
+    LineComment,
+
+    #[token("/*", block_comment_cs)]
+    BlockComment,
+
+    // Raw string literals (C# 11+): `"""…"""`. Must come before regular strings.
+    #[token("\"\"\"", raw_string_cs)]
+    RawString,
+
+    // Verbatim string: `@"…"` with `""` as escape for a literal quote.
+    #[token("@\"", verbatim_string_cs)]
+    Verbatim,
+
+    // Interpolated verbatim: `$@"…"` / `@$"…"`. Treated like a verbatim string
+    // — we don't descend into `{…}` interpolations.
+    #[token("$@\"", verbatim_string_cs)]
+    #[token("@$\"", verbatim_string_cs)]
+    InterpVerbatim,
+
+    // Regular and interpolated strings share the same escape rules for our
+    // purposes (we don't parse `{expr}` in `$"…"`).
+    #[regex(r#""([^"\\\n]|\\.)*""#)]
+    #[regex(r#"\$"([^"\\\n]|\\.)*""#)]
+    String,
+
+    #[regex(r"'([^'\\]|\\.)'")]
+    Char,
+}
+
+fn block_comment_cs(lex: &mut Lexer<CsTok>) -> Option<()> {
+    let rem = lex.remainder();
+    let end = rem.find("*/")?;
+    lex.bump(end + 2);
+    Some(())
+}
+
+fn raw_string_cs(lex: &mut Lexer<CsTok>) -> Option<()> {
+    let rem = lex.remainder();
+    let end = rem.find("\"\"\"")?;
+    lex.bump(end + 3);
+    Some(())
+}
+
+fn verbatim_string_cs(lex: &mut Lexer<CsTok>) -> Option<()> {
+    // `""` inside a verbatim string is an escaped quote, not a terminator.
+    let rem = lex.remainder();
+    let bytes = rem.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'"' {
+            if i + 1 < bytes.len() && bytes[i + 1] == b'"' {
+                i += 2;
+                continue;
+            }
+            lex.bump(i + 1);
+            return Some(());
+        }
+        i += 1;
+    }
+    None
+}
+
+pub(crate) fn cs_comments(source: &str) -> Vec<RawComment> {
+    let mut out = Vec::new();
+    let mut lex = CsTok::lexer(source);
+    while let Some(tok) = lex.next() {
+        match tok {
+            Ok(CsTok::LineComment) => {
+                let span = lex.span();
+                let raw = source[span.clone()].to_string();
+                // `////` and more are not XML doc, per Roslyn.
+                let kind = if raw.starts_with("////") {
+                    CommentKind::Line
+                } else if raw.starts_with("///") {
+                    CommentKind::Doc
+                } else {
+                    CommentKind::Line
+                };
+                out.push(RawComment {
+                    raw,
+                    kind,
+                    byte_range: span,
+                });
+            }
+            Ok(CsTok::BlockComment) => {
+                let span = lex.span();
+                out.push(RawComment {
+                    raw: source[span.clone()].to_string(),
+                    kind: CommentKind::Block,
+                    byte_range: span,
+                });
+            }
+            _ => {}
+        }
+    }
+    out
+}

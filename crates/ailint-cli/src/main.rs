@@ -397,13 +397,17 @@ fn cmd_list_rules() -> Result<ExitCode> {
     {
         println!();
         println!("LLM rules (opt-in):");
-        for id in [ailint_llm::AIL900, ailint_llm::AIL901] {
+        // AIL900 severity is set by the model per issue; AIL901 is fixed Warning.
+        for (id, severity) in [
+            (ailint_llm::AIL900, Severity::Info),
+            (ailint_llm::AIL901, Severity::Warning),
+        ] {
             println!(
                 "{:<8}  {:<40}  {:<12}  {}",
                 id.code_str(),
                 id.slug,
                 category_for(id.code),
-                Severity::Info.as_str(),
+                severity.as_str(),
             );
         }
     }

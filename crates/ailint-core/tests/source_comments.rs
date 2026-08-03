@@ -104,3 +104,31 @@ fn negative_dominated_comments_trigger_ail104() {
         "expected no AIL104 on good.rs, got {violations:?}"
     );
 }
+
+#[test]
+fn prompt_injection_marker_in_comment_triggers_ail200() {
+    let violations = lint(&fixture_root(), &enabled_config()).expect("lint");
+    assert!(
+        count(&violations, 200, "bad.rs") >= 1,
+        "expected AIL200 on bad.rs, got {violations:?}"
+    );
+    assert_eq!(
+        count(&violations, 200, "good.rs"),
+        0,
+        "expected no AIL200 on good.rs, got {violations:?}"
+    );
+}
+
+#[test]
+fn secret_shaped_string_in_comment_triggers_ail202() {
+    let violations = lint(&fixture_root(), &enabled_config()).expect("lint");
+    assert!(
+        count(&violations, 202, "bad.rs") >= 1,
+        "expected AIL202 on bad.rs, got {violations:?}"
+    );
+    assert_eq!(
+        count(&violations, 202, "good.rs"),
+        0,
+        "expected no AIL202 on good.rs, got {violations:?}"
+    );
+}
