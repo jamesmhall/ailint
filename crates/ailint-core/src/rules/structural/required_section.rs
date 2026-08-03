@@ -103,6 +103,7 @@ fn file_type_key(ft: FileType) -> &'static str {
         FileType::GenericMarkdown => "genericmarkdown",
         FileType::GenericYaml => "genericyaml",
         FileType::McpConfig => "mcpconfig",
+        FileType::SourceCode(_) => "sourcecode",
         FileType::Unknown => "unknown",
     }
 }

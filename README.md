@@ -99,6 +99,10 @@ rules:
 paths:
   exclude: [node_modules, .git, dist, target]
 
+sources:
+  enabled: false                     # opt-in: lint comments in .rs/.ts/.js/.py files
+  # languages: [rust, typescript, python]  # subset filter; empty means all
+
 llm:
   provider: openai                   # openai | anthropic | google | ollama
   model: gpt-4o
@@ -124,6 +128,14 @@ every rule lives in [docs/rules/README.md](docs/rules/README.md).
 | AIL900–999 | LLM (opt-in) | AI-graded clarity score |
 
 Run `ailint list-rules` for the current full list.
+
+### Source-code comment scanning (opt-in)
+
+Set `sources.enabled: true` to also lint AI-generated prose that leaks into
+`.rs`, `.ts`, `.js`, and `.py` files. Comments and docstrings are extracted
+by [`ailint-extractor`](crates/ailint-extractor/) and fed to the
+prose-oriented semantic rules (currently AIL100, AIL104, AIL106). Off by
+default: existing users see no behavior change.
 
 ## Workspace layout
 

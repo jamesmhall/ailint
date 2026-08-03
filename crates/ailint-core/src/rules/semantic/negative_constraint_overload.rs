@@ -4,6 +4,7 @@
 
 use serde::Deserialize;
 
+use crate::file_type::FileType;
 use crate::parser::{DocumentContent, ParsedDocument};
 use crate::rules::semantic::AIL104;
 use crate::rules::{dictionary_lines, Rule, RuleContext, RuleId, Severity, Violation};
@@ -38,6 +39,10 @@ impl Rule for NegativeConstraintOverloadRule {
 
     fn fix_hint(&self) -> &'static str {
         "Rewrite as positive directives (\"Do X\" over \"Don't Y\")."
+    }
+
+    fn applies_to(&self, file_type: FileType) -> bool {
+        file_type.has_prose_content()
     }
 
     fn run(&self, doc: &ParsedDocument, ctx: &RuleContext<'_>) -> Vec<Violation> {

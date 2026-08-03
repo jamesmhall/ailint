@@ -19,6 +19,8 @@ pub struct Config {
     pub rules: RulesConfig,
     /// Discovery include/exclude behavior.
     pub paths: PathsConfig,
+    /// Source-code comment extraction settings.
+    pub sources: SourcesConfig,
     /// Provider settings for opt-in LLM rules.
     pub llm: Option<LlmConfig>,
     /// Reporter format and output destination.
@@ -87,6 +89,22 @@ fn default_prompt_dirs() -> Vec<String> {
 
 fn default_true() -> bool {
     true
+}
+
+/// The `sources:` block of `.ailint.yaml`. Opt-in scanning of source-code
+/// comments extracted by `ailint-extractor`.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(default, deny_unknown_fields)]
+pub struct SourcesConfig {
+    /// When true, discovery walks source files (Rust, TypeScript, JavaScript,
+    /// Python) and feeds their extracted comments to prose-oriented rules.
+    /// Off by default: existing users see no change.
+    pub enabled: bool,
+    /// If non-empty, only these languages are scanned. Values are the
+    /// language ids from [`SourceLanguage::as_str`] (`"rust"`, `"typescript"`,
+    /// `"javascript"`, `"python"`). Empty means all supported languages.
+    #[serde(default)]
+    pub languages: Vec<String>,
 }
 
 /// The `llm:` block of `.ailint.yaml`; enables the opt-in AIL9xx rules.

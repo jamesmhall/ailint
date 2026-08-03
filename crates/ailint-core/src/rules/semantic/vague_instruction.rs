@@ -5,6 +5,7 @@
 use aho_corasick::AhoCorasick;
 use serde::Deserialize;
 
+use crate::file_type::FileType;
 use crate::parser::{DocumentContent, ParsedDocument};
 use crate::rules::semantic::AIL100;
 use crate::rules::{dictionary_lines, Rule, RuleContext, RuleId, Severity, Violation};
@@ -38,6 +39,10 @@ impl Rule for NoVagueInstructionRule {
 
     fn fix_hint(&self) -> &'static str {
         "Replace with a concrete verb and target the agent can act on."
+    }
+
+    fn applies_to(&self, file_type: FileType) -> bool {
+        file_type.has_prose_content()
     }
 
     fn run(&self, doc: &ParsedDocument, ctx: &RuleContext<'_>) -> Vec<Violation> {

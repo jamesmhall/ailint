@@ -2,6 +2,7 @@
 
 pub mod json;
 pub mod markdown;
+pub mod source_comments;
 pub mod yaml;
 
 use std::path::Path;
@@ -115,6 +116,10 @@ fn dispatch(raw: &str, file_type: FileType, path: &Path) -> DocumentContent {
             Ok(v) => DocumentContent::Json(v),
             Err(e) => DocumentContent::ParseError(e.to_string()),
         },
+
+        FileType::SourceCode(lang) => {
+            DocumentContent::Markdown(source_comments::synthesize(raw, lang))
+        }
 
         FileType::Unknown => DocumentContent::Text,
     }
