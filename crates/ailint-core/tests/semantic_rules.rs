@@ -144,3 +144,44 @@ fn ail105_silent_with_tags() {
         "expected AIL105 silent, got {violations:?}"
     );
 }
+
+#[test]
+fn ail104_extra_prefixes_fires_on_positive_fixture() {
+    // The "good" fixture is dominated by "do"/"build"/"test"/"complete"/
+    // "validate"/"you must" — configuring these as negative prefixes should
+    // flip it to firing.
+    let mut cfg = Config::default();
+    let opts: serde_yaml::Value = serde_yaml::from_str(
+        r#"
+extra_prefixes: ["you must", "do ", "build", "test", "complete", "validate"]
+"#,
+    )
+    .unwrap();
+    cfg.rules
+        .options
+        .insert("negative-constraint-overload".to_string(), opts);
+    let mut p = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    p.push("tests/fixtures/semantic/negative_constraint_overload/good/AGENTS.md");
+    let violations = lint(&p, &cfg).unwrap();
+    assert!(
+        count(&violations, 104) >= 1,
+        "expected configured AIL104 to fire, got {violations:?}"
+    );
+}
+
+#[test]
+fn ail104_min_list_items_suppresses_firing() {
+    let mut cfg = Config::default();
+    let opts: serde_yaml::Value = serde_yaml::from_str("min_list_items: 100").unwrap();
+    cfg.rules
+        .options
+        .insert("negative-constraint-overload".to_string(), opts);
+    let mut p = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    p.push("tests/fixtures/semantic/negative_constraint_overload/bad/AGENTS.md");
+    let violations = lint(&p, &cfg).unwrap();
+    assert_eq!(
+        count(&violations, 104),
+        0,
+        "expected AIL104 suppressed by min_list_items, got {violations:?}"
+    );
+}
