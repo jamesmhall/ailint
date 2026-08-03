@@ -3,6 +3,7 @@
 
 pub mod duplicate_rules;
 pub mod excessive_length;
+pub mod instruction_bloat;
 pub mod missing_examples;
 pub mod negative_constraint_overload;
 pub mod vague_instruction;
@@ -10,6 +11,7 @@ pub mod vendor_optimization;
 
 pub use duplicate_rules::NoDuplicateRulesRule;
 pub use excessive_length::ExcessiveRuleLengthRule;
+pub use instruction_bloat::DetectInstructionBloatRule;
 pub use missing_examples::NoMissingExamplesRule;
 pub use negative_constraint_overload::NegativeConstraintOverloadRule;
 pub use vague_instruction::NoVagueInstructionRule;
@@ -29,6 +31,8 @@ pub const AIL103: RuleId = RuleId::new(103, "no-duplicate-rules");
 pub const AIL104: RuleId = RuleId::new(104, "negative-constraint-overload");
 /// AIL105: Claude/Cline guidance without the XML tags those tools favor.
 pub const AIL105: RuleId = RuleId::new(105, "vendor-optimization-syntax");
+/// AIL106: prose paragraph is long enough that agents will skim it.
+pub const AIL106: RuleId = RuleId::new(106, "detect-instruction-bloat");
 
 /// All semantic rules, in registration order.
 pub fn all_rules() -> Vec<Box<dyn Rule>> {
@@ -39,5 +43,6 @@ pub fn all_rules() -> Vec<Box<dyn Rule>> {
         Box::new(NoDuplicateRulesRule),
         Box::new(NegativeConstraintOverloadRule),
         Box::new(VendorOptimizationSyntaxRule),
+        Box::new(DetectInstructionBloatRule),
     ]
 }

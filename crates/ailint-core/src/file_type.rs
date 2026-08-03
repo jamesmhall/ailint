@@ -43,6 +43,9 @@ pub enum FileType {
     /// Generic project YAML file (e.g. `.github/workflows/*.yml`, config).
     /// Subject only to YAML syntax validation.
     GenericYaml,
+    /// Model Context Protocol server config: `mcp.json`, `.mcp.json`,
+    /// `.cline_mcp.json`, or `mcp.json` under `.cursor/` / `.vscode/`.
+    McpConfig,
     /// Something detected as guidance but not classified more specifically.
     Unknown,
 }
@@ -65,6 +68,7 @@ impl FileType {
             ".clinerules" => return Some(Self::ClineRules),
             ".continuerules" => return Some(Self::ContinueRules),
             "copilot-instructions.md" => return Some(Self::CopilotInstructions),
+            "mcp.json" | ".mcp.json" | ".cline_mcp.json" => return Some(Self::McpConfig),
             "SYSTEM_PROMPT.md" | "system_prompt.md" => {
                 return Some(Self::GenericSystemPrompt);
             }
@@ -105,6 +109,15 @@ impl FileType {
         {
             return Some(Self::JunieGuidelines);
         }
+        // MCP config nested under editor-specific dirs.
+        if (path_str.contains("/.cursor/mcp.json")
+            || path_str.contains("/.vscode/mcp.json")
+            || path_str.ends_with(".cursor/mcp.json")
+            || path_str.ends_with(".vscode/mcp.json"))
+            && name == "mcp.json"
+        {
+            return Some(Self::McpConfig);
+        }
 
         // Suffix-based matches (VS Code Copilot customization files).
         if name.ends_with(".instructions.md")
@@ -139,7 +152,7 @@ impl FileType {
 
     /// True if this file is Markdown (either agent guidance or generic docs).
     pub fn is_markdown(self) -> bool {
-        !matches!(self, Self::GenericYaml)
+        !matches!(self, Self::GenericYaml | Self::McpConfig)
     }
 
     /// Stable kebab-case name, used in reports and config.
@@ -160,6 +173,7 @@ impl FileType {
             Self::CustomProjectRules => "custom-project-rules",
             Self::GenericMarkdown => "generic-markdown",
             Self::GenericYaml => "generic-yaml",
+            Self::McpConfig => "mcp-config",
             Self::Unknown => "unknown",
         }
     }

@@ -98,3 +98,39 @@ fn ail041_silent_on_valid_yaml() {
     let hits: Vec<_> = violations.iter().filter(|v| v.rule_id.code == 41).collect();
     assert!(hits.is_empty(), "expected no AIL041, got {violations:?}");
 }
+
+#[test]
+fn ail004_silent_on_valid_mcp_config() {
+    let path = fixture("mcp_schema", "good", "mcp.json");
+    let violations = lint(&path, &Config::default()).unwrap();
+    let hits: Vec<_> = violations.iter().filter(|v| v.rule_id.code == 4).collect();
+    assert!(hits.is_empty(), "expected no AIL004, got {violations:?}");
+}
+
+#[test]
+fn ail004_fires_on_bad_server_entries() {
+    let path = fixture("mcp_schema", "bad", "mcp.json");
+    let violations = lint(&path, &Config::default()).unwrap();
+    let hits: Vec<_> = violations.iter().filter(|v| v.rule_id.code == 4).collect();
+    // Three entries — each has one problem.
+    assert!(
+        hits.len() >= 3,
+        "expected at least three AIL004 findings, got {violations:?}"
+    );
+}
+
+#[test]
+fn ail004_fires_when_mcp_servers_key_missing() {
+    let path = fixture("mcp_schema", "missing_key", "mcp.json");
+    let violations = lint(&path, &Config::default()).unwrap();
+    let hits: Vec<_> = violations.iter().filter(|v| v.rule_id.code == 4).collect();
+    assert_eq!(hits.len(), 1, "expected one AIL004, got {violations:?}");
+    assert!(
+        hits[0]
+            .detail
+            .as_deref()
+            .is_some_and(|d| d.contains("mcpServers")),
+        "expected detail to mention mcpServers, got {:?}",
+        hits[0].detail
+    );
+}

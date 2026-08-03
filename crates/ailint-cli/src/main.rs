@@ -397,14 +397,15 @@ fn cmd_list_rules() -> Result<ExitCode> {
     {
         println!();
         println!("LLM rules (opt-in):");
-        let id = ailint_llm::AIL900;
-        println!(
-            "{:<8}  {:<40}  {:<12}  {}",
-            id.code_str(),
-            id.slug,
-            category_for(id.code),
-            Severity::Info.as_str(),
-        );
+        for id in [ailint_llm::AIL900, ailint_llm::AIL901] {
+            println!(
+                "{:<8}  {:<40}  {:<12}  {}",
+                id.code_str(),
+                id.slug,
+                category_for(id.code),
+                Severity::Info.as_str(),
+            );
+        }
     }
     Ok(ExitCode::SUCCESS)
 }

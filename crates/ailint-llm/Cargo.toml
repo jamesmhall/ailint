@@ -27,3 +27,4 @@ async-trait = "0.1"
 wiremock = "0.6"
 tokio = { workspace = true, features = ["macros", "rt-multi-thread", "test-util"] }
 serde_json.workspace = true
+async-trait = "0.1"

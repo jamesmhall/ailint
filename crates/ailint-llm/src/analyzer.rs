@@ -13,9 +13,12 @@ use crate::provider::{ChatRequest, LlmProvider, ResponseFormat};
 
 /// Rule ID for the general LLM quality-score check.
 pub const AIL900: RuleId = RuleId::new(900, "llm-quality-score");
+/// Rule ID for the LLM-graded actionability check.
+pub const AIL901: RuleId = RuleId::new(901, "llm-actionability-check");
 
 const MAX_USER_CHARS: usize = 8000;
 const SYSTEM_PROMPT: &str = include_str!("../prompts/quality_system.md");
+const ACTIONABILITY_PROMPT: &str = include_str!("../prompts/actionability_system.md");
 
 #[derive(Deserialize, Debug)]
 struct LlmResponse {
@@ -66,6 +69,42 @@ pub async fn analyze(
             _ => Severity::Info,
         };
         let mut v = Violation::new(AIL900, severity, doc.path.clone(), issue.message);
+        if let Some(line) = issue.line {
+            v = v.at(line, 1);
+        }
+        v.fix_hint = issue.fix_hint;
+        out.push(v);
+    }
+    Ok(out)
+}
+
+/// Run the LLM-graded actionability check (AIL901) for a single document.
+///
+/// Emits one violation per non-actionable directive the model identifies.
+/// All findings are `Warning` severity regardless of what the LLM returns.
+pub async fn analyze_actionability(
+    provider: &dyn LlmProvider,
+    model: &str,
+    doc: &ParsedDocument,
+) -> Result<Vec<Violation>> {
+    let req = ChatRequest {
+        model: model.to_string(),
+        system: Some(ACTIONABILITY_PROMPT.to_string()),
+        user: build_user_prompt(doc),
+        response_format: ResponseFormat::JsonSchema {
+            schema: response_schema(),
+            name: "ailint_actionability".into(),
+        },
+        ..Default::default()
+    };
+
+    let resp = provider.chat(&req).await?;
+    let parsed: LlmResponse = serde_json::from_str(&resp.text)
+        .with_context(|| format!("LLM response was not valid JSON: {}", resp.text))?;
+
+    let mut out = Vec::with_capacity(parsed.issues.len());
+    for issue in parsed.issues {
+        let mut v = Violation::new(AIL901, Severity::Warning, doc.path.clone(), issue.message);
         if let Some(line) = issue.line {
             v = v.at(line, 1);
         }
