@@ -9,7 +9,7 @@ use serde::Deserialize;
 use crate::file_type::FileType;
 use crate::parser::{DocumentContent, ParsedDocument};
 use crate::rules::structural::AIL003;
-use crate::rules::{Rule, RuleContext, RuleId, Severity, Violation};
+use crate::rules::{Rule, RuleContext, RuleId, Severity, TextEdit, Violation};
 
 /// AIL003 missing-required-section: file type mandates a section that is absent.
 #[derive(Debug, Default)]
@@ -77,7 +77,8 @@ impl Rule for MissingRequiredSectionRule {
                 doc.path.clone(),
                 "missing required section",
             )
-            .with_detail(entry);
+            .with_detail(entry.clone())
+            .with_fix(append_section_fix(&doc.raw, &entry));
             out.push(v);
         }
         out
@@ -102,5 +103,23 @@ fn file_type_key(ft: FileType) -> &'static str {
         FileType::GenericMarkdown => "genericmarkdown",
         FileType::GenericYaml => "genericyaml",
         FileType::Unknown => "unknown",
+    }
+}
+
+// Append `\n## <name>\n\n` at end of file, normalizing trailing newlines.
+fn append_section_fix(raw: &str, name: &str) -> TextEdit {
+    let end = raw.len();
+    let has_trailing_newline = raw.ends_with('\n');
+    let prefix = if raw.is_empty() {
+        ""
+    } else if has_trailing_newline {
+        "\n"
+    } else {
+        "\n\n"
+    };
+    let replacement = format!("{prefix}## {name}\n\n");
+    TextEdit {
+        range: end..end,
+        replacement,
     }
 }

@@ -103,3 +103,33 @@ fn check_config_discovery_walks_up() {
         .success()
         .stdout(predicates::str::contains("AIL200").not());
 }
+
+#[test]
+fn check_fix_injects_missing_required_section() {
+    let td = TempDir::new().expect("tempdir");
+    let root = td.path();
+    fs::write(
+        root.join(".ailint.yaml"),
+        "rules:\n  options:\n    missing-required-section:\n      required: [\"Setup\"]\n",
+    )
+    .expect("write config");
+
+    let file = root.join("AGENTS.md");
+    fs::write(&file, "# My Agents\n\nSome intro text.\n").expect("write fixture");
+
+    bin()
+        .current_dir(root)
+        .args(["check", "AGENTS.md", "--fix"])
+        .assert()
+        .success();
+
+    let after = fs::read_to_string(&file).expect("read after");
+    assert!(
+        after.contains("## Setup"),
+        "expected fix to append '## Setup' heading; file is:\n{after}"
+    );
+    assert!(
+        after.starts_with("# My Agents\n\nSome intro text.\n"),
+        "expected original content preserved verbatim; file is:\n{after}"
+    );
+}

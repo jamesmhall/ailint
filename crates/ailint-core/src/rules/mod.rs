@@ -77,6 +77,19 @@ impl Severity {
     }
 }
 
+/// A single deterministic edit to a document's raw text.
+///
+/// Ranges are byte offsets into `ParsedDocument::raw`. Multiple `TextEdit`s
+/// against one file must not overlap; the fix pipeline sorts descending by
+/// `range.start` and refuses to apply a fileset whose edits collide.
+#[derive(Debug, Clone, Serialize)]
+pub struct TextEdit {
+    /// Byte range in the original document to replace.
+    pub range: std::ops::Range<usize>,
+    /// Replacement text; may be empty to delete the range.
+    pub replacement: String,
+}
+
 /// A concrete finding produced by a rule.
 #[derive(Debug, Clone, Serialize)]
 pub struct Violation {
@@ -102,6 +115,10 @@ pub struct Violation {
     /// duplicate line ref, YAML error text). Reporters show this once per
     /// row instead of repeating a boilerplate prefix on every message.
     pub detail: Option<String>,
+    /// Deterministic edits that, if applied, resolve this finding. Empty
+    /// when no automated fix is available.
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub fixes: Vec<TextEdit>,
 }
 
 impl Violation {
@@ -123,6 +140,7 @@ impl Violation {
             snippet: None,
             source_url: None,
             detail: None,
+            fixes: Vec::new(),
         }
     }
 
@@ -136,6 +154,12 @@ impl Violation {
     /// Attach the varying finding-specific detail.
     pub fn with_detail(mut self, detail: impl Into<String>) -> Self {
         self.detail = Some(detail.into());
+        self
+    }
+
+    /// Attach a deterministic text edit that resolves this finding.
+    pub fn with_fix(mut self, fix: TextEdit) -> Self {
+        self.fixes.push(fix);
         self
     }
 }
