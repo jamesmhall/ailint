@@ -2,6 +2,8 @@
 
 use std::path::Path;
 
+pub use ailint_extractor::Language as SourceLanguage;
+
 /// The kind of AI agent guidance file we recognize.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum FileType {
@@ -46,6 +48,10 @@ pub enum FileType {
     /// Model Context Protocol server config: `mcp.json`, `.mcp.json`,
     /// `.cline_mcp.json`, or `mcp.json` under `.cursor/` / `.vscode/`.
     McpConfig,
+    /// Source code file scanned for AI-slop-like comments. Only produced by
+    /// [`crate::discovery::walk`] when `sources.enabled` is set in the
+    /// config; [`FileType::detect`] never returns this variant on its own.
+    SourceCode(SourceLanguage),
     /// Something detected as guidance but not classified more specifically.
     Unknown,
 }
@@ -147,12 +153,25 @@ impl FileType {
     /// True if this file is an AI agent guidance file (not generic project
     /// documentation or config). AI-specific rules use this to filter.
     pub fn is_ai_guidance(self) -> bool {
-        !matches!(self, Self::GenericMarkdown | Self::GenericYaml)
+        !matches!(
+            self,
+            Self::GenericMarkdown | Self::GenericYaml | Self::SourceCode(_)
+        )
+    }
+
+    /// True if this file's content is prose that AI-slop-oriented rules
+    /// (vague instructions, negative overload, bloat) should scan. Covers
+    /// AI-guidance documents plus extracted source-code comments.
+    pub fn has_prose_content(self) -> bool {
+        self.is_ai_guidance() || matches!(self, Self::SourceCode(_))
     }
 
     /// True if this file is Markdown (either agent guidance or generic docs).
     pub fn is_markdown(self) -> bool {
-        !matches!(self, Self::GenericYaml | Self::McpConfig)
+        !matches!(
+            self,
+            Self::GenericYaml | Self::McpConfig | Self::SourceCode(_)
+        )
     }
 
     /// Stable kebab-case name, used in reports and config.
@@ -174,6 +193,7 @@ impl FileType {
             Self::GenericMarkdown => "generic-markdown",
             Self::GenericYaml => "generic-yaml",
             Self::McpConfig => "mcp-config",
+            Self::SourceCode(_) => "source-code",
             Self::Unknown => "unknown",
         }
     }

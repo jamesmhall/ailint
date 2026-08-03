@@ -45,6 +45,7 @@ name = "ailint-core"
 version = "1.0.2"
 dependencies = [
  "aho-corasick",
+ "ailint-extractor",
  "anyhow",
  "chrono",
  "colored",

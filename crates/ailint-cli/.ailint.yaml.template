@@ -43,6 +43,16 @@ paths:
   prompt_dirs:
     - prompts/**
 
+# Opt-in source-code comment scanning. When enabled, ailint discovers
+# supported source files (Rust, TypeScript, JavaScript, Python), extracts
+# their comments and docstrings via ailint-extractor, and runs prose-oriented
+# rules (AIL100, AIL104, AIL106) against them. Off by default.
+sources:
+  enabled: false
+  # Restrict scanning to a subset of supported languages. Values: rust,
+  # typescript, javascript, python. Empty means all supported languages.
+  # languages: [rust, typescript, python]
+
 # Enable AI-powered analysis (opt-in). Requires an API key in the
 # provider-specific env var or AILINT_LLM_API_KEY.
 # llm:

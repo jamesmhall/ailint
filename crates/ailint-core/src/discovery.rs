@@ -7,7 +7,7 @@ use ignore::overrides::OverrideBuilder;
 use ignore::WalkBuilder;
 
 use crate::config::Config;
-use crate::file_type::FileType;
+use crate::file_type::{FileType, SourceLanguage};
 use crate::DiscoveredFile;
 
 /// Walk `root` and return every recognized guidance file.
@@ -16,7 +16,9 @@ use crate::DiscoveredFile;
 /// applies `paths.include`/`paths.exclude` globs, and follows symlinks
 /// when `paths.follow_symlinks` is set. Files under a `paths.prompt_dirs`
 /// directory are reclassified as `FileType::GenericSystemPrompt` (see
-/// `reclassify_prompt_dir`).
+/// `reclassify_prompt_dir`). Source code files (Rust, TS, JS, Python)
+/// are picked up as `FileType::SourceCode` only when `sources.enabled`
+/// is set.
 pub fn walk(root: &Path, config: &Config) -> Result<Vec<DiscoveredFile>> {
     let overrides = build_overrides(root, config)?;
     let prompt_overrides = build_prompt_overrides(root, config)?;
@@ -44,9 +46,10 @@ pub fn walk(root: &Path, config: &Config) -> Result<Vec<DiscoveredFile>> {
             continue;
         }
         let in_prompt_dir = prompt_overrides.matched(entry.path(), false).is_whitelist();
-        if let Some(file_type) =
+        let detected =
             reclassify_prompt_dir(FileType::detect(entry.path()), entry.path(), in_prompt_dir)
-        {
+                .or_else(|| detect_source_file(entry.path(), config));
+        if let Some(file_type) = detected {
             out.push(DiscoveredFile {
                 path: entry.path().to_path_buf(),
                 file_type,
@@ -55,6 +58,26 @@ pub fn walk(root: &Path, config: &Config) -> Result<Vec<DiscoveredFile>> {
     }
 
     Ok(out)
+}
+
+/// Optionally classify a file as source code, based on `sources.enabled` and
+/// the configured language filter. Only reached when no other detection
+/// matched (guidance and generic Markdown/YAML take precedence).
+fn detect_source_file(path: &Path, config: &Config) -> Option<FileType> {
+    if !config.sources.enabled {
+        return None;
+    }
+    let lang = SourceLanguage::from_path(path)?;
+    if !config.sources.languages.is_empty()
+        && !config
+            .sources
+            .languages
+            .iter()
+            .any(|l| l.eq_ignore_ascii_case(lang.as_str()))
+    {
+        return None;
+    }
+    Some(FileType::SourceCode(lang))
 }
 
 fn build_overrides(root: &Path, config: &Config) -> Result<ignore::overrides::Override> {
