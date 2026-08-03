@@ -84,6 +84,12 @@ struct CheckArgs {
     /// Model name for the chosen LLM provider.
     #[arg(long, value_name = "MODEL", requires = "llm_provider")]
     llm_model: Option<String>,
+
+    /// Apply deterministic auto-fixes for any fixable violation, in place.
+    /// Files with overlapping fix ranges are skipped and reported as
+    /// conflicts.
+    #[arg(long)]
+    fix: bool,
 }
 
 #[derive(Debug, clap::Args)]
@@ -213,6 +219,23 @@ fn cmd_check(args: CheckArgs, mut config: Config) -> Result<ExitCode> {
         }
     }
 
+    let fix_summary = if args.fix {
+        Some(apply_fixes_and_report(&violations)?)
+    } else {
+        None
+    };
+    // After --fix, re-run so the reporter shows what's actually left.
+    if fix_summary.as_ref().is_some_and(|s| s.applied > 0) {
+        violations.clear();
+        for path in &args.paths {
+            violations.extend(ailint_core::lint(path, &config)?);
+            #[cfg(feature = "llm")]
+            {
+                violations.extend(llm_bridge::run(&config, path));
+            }
+        }
+    }
+
     let reporter = reporter::make(args.format.into());
     let mut sink: Box<dyn Write> = match args.output {
         Some(ref p) => Box::new(std::fs::File::create(p)?),
@@ -228,6 +251,12 @@ fn cmd_check(args: CheckArgs, mut config: Config) -> Result<ExitCode> {
         .iter()
         .filter(|v| matches!(v.severity, Severity::Warning))
         .count();
+    if let Some(summary) = fix_summary {
+        // Conflicts are user-actionable: we did not touch those files.
+        if summary.conflicts > 0 {
+            return Ok(ExitCode::from(1));
+        }
+    }
     if error_count > 0 {
         return Ok(ExitCode::from(1));
     }
@@ -237,6 +266,37 @@ fn cmd_check(args: CheckArgs, mut config: Config) -> Result<ExitCode> {
         }
     }
     Ok(ExitCode::SUCCESS)
+}
+
+struct FixSummary {
+    applied: usize,
+    conflicts: usize,
+}
+
+fn apply_fixes_and_report(violations: &[ailint_core::Violation]) -> Result<FixSummary> {
+    let results = ailint_core::apply_fixes(violations)?;
+    let mut applied = 0usize;
+    let mut conflicts = 0usize;
+    for r in &results {
+        if let Some(c) = &r.conflict {
+            conflicts += 1;
+            eprintln!(
+                "ailint: fix conflict in {}: edits {:?} and {:?} overlap; file left unchanged",
+                r.path.display(),
+                c.first,
+                c.second
+            );
+        } else if r.applied > 0 {
+            applied += r.applied;
+            eprintln!(
+                "ailint: fixed {} in {} ({} edits)",
+                if r.applied == 1 { "1 issue" } else { "issues" },
+                r.path.display(),
+                r.applied
+            );
+        }
+    }
+    Ok(FixSummary { applied, conflicts })
 }
 
 fn apply_check_overrides(args: &CheckArgs, config: &mut Config) -> Result<()> {

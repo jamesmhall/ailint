@@ -15,6 +15,7 @@
 pub mod config;
 pub mod discovery;
 pub mod file_type;
+pub mod fix;
 pub mod parser;
 pub mod reporter;
 pub mod rules;
@@ -25,8 +26,9 @@ use anyhow::Result;
 
 pub use crate::config::Config;
 pub use crate::file_type::FileType;
+pub use crate::fix::{apply_all as apply_fixes, FileFixResult, FixConflict};
 pub use crate::reporter::{Reporter, ReporterKind};
-pub use crate::rules::{RuleId, Severity, Violation};
+pub use crate::rules::{RuleId, Severity, TextEdit, Violation};
 
 /// A single discovered guidance file and its detected type.
 #[derive(Debug, Clone)]

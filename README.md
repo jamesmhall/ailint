@@ -80,6 +80,7 @@ brew install jamesmhall/ailint/ailint
 ```bash
 ailint check .                       # lint current directory
 ailint check . --format sarif -o out.sarif
+ailint check . --fix                 # apply deterministic auto-fixes in place
 ailint stats .                       # coverage / rule-density report
 ailint init                          # scaffold .ailint.yaml
 ailint list-rules                    # print all rules
