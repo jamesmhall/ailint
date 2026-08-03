@@ -1,0 +1,10 @@
+# Default negation prefixes for AIL104 negative-constraint-overload.
+# One prefix per line; matched case-insensitively against the trimmed
+# start of each list item. Blank lines and '#' lines are ignored.
+do not
+don't
+never
+avoid
+stop 
+no 
+must not

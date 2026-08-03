@@ -1,0 +1,9 @@
+# Default destructive-action phrases for AIL203 tool-confirmation-required.
+# One phrase per line; matched case-insensitively as a substring of the
+# document. Blank lines and '#' lines are ignored.
+delete data
+rm -rf
+drop table
+truncate table
+irreversible
+destructive action

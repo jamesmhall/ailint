@@ -3,39 +3,25 @@
 //!
 //! See: `docs/rules/security/AIL202.md`
 
-use std::sync::OnceLock;
-
 use regex::{Regex, RegexSet};
+use serde::Deserialize;
 
 use crate::parser::ParsedDocument;
 use crate::rules::security::{line_of_offset, AIL202};
 use crate::rules::{dictionary_lines, Rule, RuleContext, RuleId, Severity, Violation};
 
-const SECRET_PATTERNS: &str = include_str!("secret_patterns.txt");
-
+const DEFAULT_SECRET_PATTERNS: &str = include_str!("secret_patterns.txt");
 // Substrings within ±50 chars that mark a match as a documentation/fixture
 // placeholder and should be ignored.
-const ALLOWLIST_MARKERS: &str = include_str!("secret_allowlist_markers.txt");
+const DEFAULT_ALLOWLIST_MARKERS: &str = include_str!("secret_allowlist_markers.txt");
 
-struct Matchers {
-    regexes: Vec<Regex>,
-    // Single-pass prefilter; None only if the set fails to build.
-    set: Option<RegexSet>,
-}
-
-fn matchers() -> &'static Matchers {
-    static MATCHERS: OnceLock<Matchers> = OnceLock::new();
-    MATCHERS.get_or_init(|| {
-        let patterns: Vec<&str> = dictionary_lines(SECRET_PATTERNS)
-            .into_iter()
-            .filter(|p| Regex::new(p).is_ok())
-            .collect();
-        let regexes = patterns.iter().filter_map(|p| Regex::new(p).ok()).collect();
-        Matchers {
-            regexes,
-            set: RegexSet::new(&patterns).ok(),
-        }
-    })
+#[derive(Debug, Default, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+struct Options {
+    patterns: Option<Vec<String>>,
+    extra_patterns: Option<Vec<String>>,
+    allowlist_markers: Option<Vec<String>>,
+    extra_allowlist_markers: Option<Vec<String>>,
 }
 
 /// AIL202 no-sensitive-data-in-instructions: flags embedded secrets.
@@ -59,23 +45,60 @@ impl Rule for NoSensitiveDataInInstructionsRule {
         "Move the credential to an env var (e.g. AILINT_LLM_API_KEY) or a secret store."
     }
 
-    fn run(&self, doc: &ParsedDocument, _ctx: &RuleContext<'_>) -> Vec<Violation> {
-        let matchers = matchers();
-        let indices: Vec<usize> = match &matchers.set {
-            Some(s) => s.matches(&doc.raw).into_iter().collect(),
-            None => (0..matchers.regexes.len()).collect(),
+    fn run(&self, doc: &ParsedDocument, ctx: &RuleContext<'_>) -> Vec<Violation> {
+        let opts: Options = ctx
+            .options
+            .and_then(|v| serde_yaml::from_value(v.clone()).ok())
+            .unwrap_or_default();
+
+        let mut patterns: Vec<String> = match opts.patterns {
+            Some(p) => p,
+            None => dictionary_lines(DEFAULT_SECRET_PATTERNS)
+                .into_iter()
+                .map(String::from)
+                .collect(),
         };
+        if let Some(extra) = opts.extra_patterns {
+            patterns.extend(extra);
+        }
+        let mut markers: Vec<String> = match opts.allowlist_markers {
+            Some(m) => m,
+            None => dictionary_lines(DEFAULT_ALLOWLIST_MARKERS)
+                .into_iter()
+                .map(String::from)
+                .collect(),
+        };
+        if let Some(extra) = opts.extra_allowlist_markers {
+            markers.extend(extra);
+        }
+
+        // Compile individually (silently skipping invalid user patterns), then
+        // use a RegexSet as a single-pass prefilter over the document.
+        let compiled: Vec<Regex> = patterns.iter().filter_map(|p| Regex::new(p).ok()).collect();
+        let valid_patterns: Vec<&str> = patterns
+            .iter()
+            .filter(|p| Regex::new(p).is_ok())
+            .map(String::as_str)
+            .collect();
+        let set = RegexSet::new(&valid_patterns).ok();
+        let indices: Vec<usize> = match &set {
+            Some(s) => s.matches(&doc.raw).into_iter().collect(),
+            None => (0..compiled.len()).collect(),
+        };
+
         let mut out = Vec::new();
         for idx in indices {
-            let re = &matchers.regexes[idx];
+            let re = &compiled[idx];
             for m in re.find_iter(&doc.raw) {
-                if is_allowlisted(&doc.raw, m.start(), m.end()) || is_repeated_char(m.as_str()) {
+                if is_allowlisted(&doc.raw, m.start(), m.end(), &markers)
+                    || is_repeated_char(m.as_str())
+                {
                     continue;
                 }
                 let line = line_of_offset(&doc.raw, m.start());
                 let v = Violation::new(
                     AIL202,
-                    self.default_severity(),
+                    ctx.severity,
                     doc.path.clone(),
                     "possible embedded secret",
                 )
@@ -87,13 +110,11 @@ impl Rule for NoSensitiveDataInInstructionsRule {
     }
 }
 
-fn is_allowlisted(raw: &str, start: usize, end: usize) -> bool {
+fn is_allowlisted(raw: &str, start: usize, end: usize, markers: &[String]) -> bool {
     let ctx_start = start.saturating_sub(50);
     let ctx_end = (end + 50).min(raw.len());
     let ctx = &raw[ctx_start..ctx_end];
-    dictionary_lines(ALLOWLIST_MARKERS)
-        .iter()
-        .any(|m| ctx.contains(m))
+    markers.iter().any(|m| ctx.contains(m.as_str()))
 }
 
 // Treat 5+ repeated chars in the match body as a placeholder (AAAAA..., 00000...).

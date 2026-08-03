@@ -11,6 +11,15 @@ rules:
   # options:
   #   AIL100:
   #     phrases: ["maybe", "somehow", "properly"]
+  #   negative-constraint-overload:
+  #     extra_prefixes: ["stop from", "you shall not"]
+  #     min_list_items: 5
+  #   no-sensitive-data-in-instructions:
+  #     extra_patterns: ['\bmyco_[A-Za-z0-9]{24,}\b']
+  #     extra_allowlist_markers: ["FIXTURE_ONLY"]
+  #   tool-confirmation-required:
+  #     extra_destructive_phrases: ["gcloud projects delete", "kubectl delete ns"]
+  #     extra_confirmation_phrases: ["require ticket approval"]
 
 paths:
   # Path globs to exclude from discovery.

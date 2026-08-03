@@ -2,9 +2,22 @@
 //!
 //! See: `docs/rules/semantic/AIL104.md`
 
+use serde::Deserialize;
+
 use crate::parser::{DocumentContent, ParsedDocument};
 use crate::rules::semantic::AIL104;
-use crate::rules::{Rule, RuleContext, RuleId, Severity, Violation};
+use crate::rules::{dictionary_lines, Rule, RuleContext, RuleId, Severity, Violation};
+
+const DEFAULT_PREFIXES: &str = include_str!("negation_prefixes.txt");
+const DEFAULT_MIN_LIST_ITEMS: usize = 5;
+
+#[derive(Debug, Default, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+struct Options {
+    prefixes: Option<Vec<String>>,
+    extra_prefixes: Option<Vec<String>>,
+    min_list_items: Option<usize>,
+}
 
 /// AIL104 negative-constraint-overload: list dominated by "do not" constraints.
 #[derive(Debug, Default)]
@@ -33,14 +46,30 @@ impl Rule for NegativeConstraintOverloadRule {
             _ => return Vec::new(),
         };
 
-        if md.list_items.len() < 5 {
+        let opts: Options = ctx
+            .options
+            .and_then(|v| serde_yaml::from_value(v.clone()).ok())
+            .unwrap_or_default();
+
+        let min_list_items = opts.min_list_items.unwrap_or(DEFAULT_MIN_LIST_ITEMS);
+        if md.list_items.len() < min_list_items {
             return Vec::new();
         }
 
         // Prefix match only: mid-sentence negations ("prefer X, not Y") are fine.
-        let negative_prefixes = [
-            "do not", "don't", "never", "avoid", "stop ", "no ", "must not",
-        ];
+        let mut prefixes: Vec<String> = match opts.prefixes {
+            Some(p) => p,
+            None => dictionary_lines(DEFAULT_PREFIXES)
+                .into_iter()
+                .map(String::from)
+                .collect(),
+        };
+        if let Some(extra) = opts.extra_prefixes {
+            prefixes.extend(extra);
+        }
+        for p in &mut prefixes {
+            *p = p.to_lowercase();
+        }
 
         let mut negative_count = 0;
         for item in &md.list_items {
@@ -49,7 +78,7 @@ impl Rule for NegativeConstraintOverloadRule {
                 .trim_start_matches(['*', '_', '`'])
                 .trim()
                 .to_lowercase();
-            if negative_prefixes.iter().any(|p| lower_text.starts_with(p)) {
+            if prefixes.iter().any(|p| lower_text.starts_with(p.as_str())) {
                 negative_count += 1;
             }
         }
