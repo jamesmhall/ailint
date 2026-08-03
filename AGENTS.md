@@ -18,6 +18,9 @@ Workspace layout:
 
 - `crates/ailint-core` — discovery, parsing, rule engine, reporters. No
   network access, no LLM calls.
+- `crates/ailint-extractor` — Logos-based lexer that extracts line and
+  block comments from Rust, TypeScript, JavaScript, and Python source
+  files. Pure CPU; no network.
 - `crates/ailint-llm` — optional AI-graded analyzer and provider clients.
   All network / LLM code lives here.
 - `crates/ailint-cli` — the `ailint` binary. Argument parsing, config

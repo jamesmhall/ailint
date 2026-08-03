@@ -1,0 +1,16 @@
+[package]
+name = "ailint-extractor"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Logos-based comment extractor: pulls line and block comments from Rust, TypeScript, JavaScript, and Python source files as virtual documents for ailint."
+readme = "../../README.md"
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
+logos.workspace = true
