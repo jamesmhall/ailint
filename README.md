@@ -132,11 +132,12 @@ The repository is structured to separate the core engine, LLM integrations, and 
 ```
 ailint/
 ├── crates/
-│   ├── ailint-core/   # discovery, parsing, rule engine, reporters
-│   ├── ailint-llm/    # optional LLM analyzer + provider integrations
-│   └── ailint-cli/    # the `ailint` binary
-├── action.yml         # GitHub Action
-├── npm/               # npx wrapper
+│   ├── ailint-core/       # discovery, parsing, rule engine, reporters
+│   ├── ailint-extractor/  # Logos-based comment extraction (Rust, TS, JS, Python)
+│   ├── ailint-llm/        # optional LLM analyzer + provider integrations
+│   └── ailint-cli/        # the `ailint` binary
+├── action.yml             # GitHub Action
+├── npm/                   # npx wrapper
 └── docker/Dockerfile
 ```
 
