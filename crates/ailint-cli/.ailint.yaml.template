@@ -50,7 +50,8 @@ paths:
 sources:
   enabled: false
   # Restrict scanning to a subset of supported languages. Values: rust,
-  # typescript, javascript, python. Empty means all supported languages.
+  # typescript, javascript, python, go, java, csharp. Empty means all
+  # supported languages.
   # languages: [rust, typescript, python]
 
 # Enable AI-powered analysis (opt-in). Requires an API key in the

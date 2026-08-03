@@ -243,3 +243,114 @@ fn multiple_comments_preserve_source_order() {
     let cs = extract(src, Language::Rust);
     assert_eq!(bodies(&cs), vec!["a", "b", "c"]);
 }
+
+// ---------- Go ----------
+
+#[test]
+fn go_line_and_block_comments_extracted() {
+    let src = "\
+package main
+
+// line one
+/* block */
+func main() {}
+";
+    let cs = extract(src, Language::Go);
+    assert_eq!(kinds(&cs), vec![CommentKind::Line, CommentKind::Block]);
+    assert_eq!(bodies(&cs), vec!["line one", "block"]);
+    assert_eq!(lines(&cs), vec![3, 4]);
+}
+
+#[test]
+fn go_ignores_slashes_in_strings_and_raw_strings() {
+    let src = r#"
+package main
+
+const a = "not // a comment"
+const b = `raw // not a comment`
+// real
+"#;
+    let cs = extract(src, Language::Go);
+    assert_eq!(bodies(&cs), vec!["real"]);
+}
+
+#[test]
+fn go_rune_literal_does_not_open_string() {
+    let src = "\
+package main
+const q = '/'
+// real
+";
+    let cs = extract(src, Language::Go);
+    assert_eq!(bodies(&cs), vec!["real"]);
+}
+
+// ---------- Java ----------
+
+#[test]
+fn java_line_block_and_javadoc() {
+    let src = "\
+// line one
+/* block */
+/** javadoc */
+class C {}
+";
+    let cs = extract(src, Language::Java);
+    assert_eq!(
+        kinds(&cs),
+        vec![CommentKind::Line, CommentKind::Block, CommentKind::Doc]
+    );
+    assert_eq!(bodies(&cs), vec!["line one", "block", "javadoc"]);
+}
+
+#[test]
+fn java_ignores_slashes_in_strings_and_text_blocks() {
+    let src = "\
+class C {
+    String a = \"not // a comment\";
+    String b = \"\"\"
+        text block // not a comment
+        \"\"\";
+    // real
+}
+";
+    let cs = extract(src, Language::Java);
+    assert_eq!(bodies(&cs), vec!["real"]);
+}
+
+// ---------- C# ----------
+
+#[test]
+fn cs_line_block_and_xmldoc() {
+    let src = "\
+// line one
+/// xml doc
+/* block */
+//// four slashes is not a doc
+class C {}
+";
+    let cs = extract(src, Language::CSharp);
+    assert_eq!(
+        kinds(&cs),
+        vec![
+            CommentKind::Line,
+            CommentKind::Doc,
+            CommentKind::Block,
+            CommentKind::Line,
+        ]
+    );
+}
+
+#[test]
+fn cs_ignores_slashes_in_verbatim_and_raw_strings() {
+    let src = "\
+class C {
+    string a = @\"not // a comment with \"\"escapes\"\"\";
+    string b = \"\"\"raw // not a comment\"\"\";
+    string c = $\"not // a comment {x}\";
+    // real
+}
+";
+    let cs = extract(src, Language::CSharp);
+    assert_eq!(bodies(&cs), vec!["real"]);
+}

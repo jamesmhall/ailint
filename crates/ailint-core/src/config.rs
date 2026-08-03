@@ -97,12 +97,13 @@ fn default_true() -> bool {
 #[serde(default, deny_unknown_fields)]
 pub struct SourcesConfig {
     /// When true, discovery walks source files (Rust, TypeScript, JavaScript,
-    /// Python) and feeds their extracted comments to prose-oriented rules.
-    /// Off by default: existing users see no change.
+    /// Python, Go, Java, C#) and feeds their extracted comments to
+    /// prose-oriented rules. Off by default: existing users see no change.
     pub enabled: bool,
     /// If non-empty, only these languages are scanned. Values are the
     /// language ids from [`SourceLanguage::as_str`] (`"rust"`, `"typescript"`,
-    /// `"javascript"`, `"python"`). Empty means all supported languages.
+    /// `"javascript"`, `"python"`, `"go"`, `"java"`, `"csharp"`). Empty means
+    /// all supported languages.
     #[serde(default)]
     pub languages: Vec<String>,
 }

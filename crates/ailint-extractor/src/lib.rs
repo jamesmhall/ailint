@@ -27,7 +27,7 @@ use std::path::Path;
 
 mod lexers;
 
-use lexers::{js_comments, py_comments, rust_comments};
+use lexers::{cs_comments, go_comments, java_comments, js_comments, py_comments, rust_comments};
 
 /// Programming languages supported by the extractor.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -43,6 +43,16 @@ pub enum Language {
     /// Python (`.py`). Handles `#` line comments and triple-quoted strings
     /// (surfaced as [`CommentKind::Docstring`]).
     Python,
+    /// Go (`.go`). Handles `//`, `/* */`, plus `"…"`, raw `` `…` ``, and
+    /// `'…'` rune literals. Go has no dedicated doc-comment syntax.
+    Go,
+    /// Java (`.java`). Handles `//`, `/* */`, `/** */` javadoc, plus `"…"`,
+    /// `"""…"""` text blocks (Java 15+), and `'…'` char literals.
+    Java,
+    /// C# (`.cs`). Handles `//`, `///` XML doc, `/* */`, plus `"…"`, `@"…"`
+    /// verbatim (with `""` escapes), `$"…"` interpolated (surface only),
+    /// and `'…'` char literals.
+    CSharp,
 }
 
 impl Language {
@@ -57,6 +67,9 @@ impl Language {
             "ts" | "tsx" | "mts" | "cts" => Some(Self::TypeScript),
             "js" | "jsx" | "mjs" | "cjs" => Some(Self::JavaScript),
             "py" | "pyi" => Some(Self::Python),
+            "go" => Some(Self::Go),
+            "java" => Some(Self::Java),
+            "cs" => Some(Self::CSharp),
             _ => None,
         }
     }
@@ -68,6 +81,9 @@ impl Language {
             Self::TypeScript => "typescript",
             Self::JavaScript => "javascript",
             Self::Python => "python",
+            Self::Go => "go",
+            Self::Java => "java",
+            Self::CSharp => "csharp",
         }
     }
 }
@@ -164,6 +180,9 @@ pub fn extract(source: &str, language: Language) -> Vec<Comment> {
         Language::Rust => rust_comments(source),
         Language::TypeScript | Language::JavaScript => js_comments(source),
         Language::Python => py_comments(source),
+        Language::Go => go_comments(source),
+        Language::Java => java_comments(source),
+        Language::CSharp => cs_comments(source),
     };
     attach_lines(source, raw_comments)
 }
@@ -218,6 +237,9 @@ mod tests {
             ("bundle.mjs", Language::JavaScript),
             ("main.py", Language::Python),
             ("types.pyi", Language::Python),
+            ("cmd/main.go", Language::Go),
+            ("App.java", Language::Java),
+            ("Program.cs", Language::CSharp),
         ] {
             assert_eq!(
                 Language::from_path(&PathBuf::from(path)),
@@ -240,6 +262,9 @@ mod tests {
         assert_eq!(Language::TypeScript.as_str(), "typescript");
         assert_eq!(Language::JavaScript.as_str(), "javascript");
         assert_eq!(Language::Python.as_str(), "python");
+        assert_eq!(Language::Go.as_str(), "go");
+        assert_eq!(Language::Java.as_str(), "java");
+        assert_eq!(Language::CSharp.as_str(), "csharp");
     }
 
     #[test]

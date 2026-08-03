@@ -6,6 +6,7 @@
 use regex::{Regex, RegexSet};
 use serde::Deserialize;
 
+use crate::file_type::FileType;
 use crate::parser::ParsedDocument;
 use crate::rules::security::{line_of_offset, AIL202};
 use crate::rules::{dictionary_lines, Rule, RuleContext, RuleId, Severity, Violation};
@@ -43,6 +44,10 @@ impl Rule for NoSensitiveDataInInstructionsRule {
 
     fn fix_hint(&self) -> &'static str {
         "Move the credential to an env var (e.g. AILINT_LLM_API_KEY) or a secret store."
+    }
+
+    fn applies_to(&self, file_type: FileType) -> bool {
+        file_type.has_prose_content()
     }
 
     fn run(&self, doc: &ParsedDocument, ctx: &RuleContext<'_>) -> Vec<Violation> {

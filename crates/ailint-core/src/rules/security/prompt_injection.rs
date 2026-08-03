@@ -5,6 +5,7 @@
 use regex::{Regex, RegexBuilder, RegexSetBuilder};
 use serde::Deserialize;
 
+use crate::file_type::FileType;
 use crate::parser::ParsedDocument;
 use crate::rules::security::{line_containing, line_of_offset, truncate_chars, AIL200};
 use crate::rules::{dictionary_lines, Rule, RuleContext, RuleId, Severity, Violation};
@@ -38,6 +39,10 @@ impl Rule for NoPromptInjectionMarkerRule {
 
     fn fix_hint(&self) -> &'static str {
         "Remove the marker; injected content could exploit it."
+    }
+
+    fn applies_to(&self, file_type: FileType) -> bool {
+        file_type.has_prose_content()
     }
 
     fn run(&self, doc: &ParsedDocument, ctx: &RuleContext<'_>) -> Vec<Violation> {
