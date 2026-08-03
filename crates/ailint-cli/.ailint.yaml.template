@@ -20,6 +20,8 @@ rules:
   #   tool-confirmation-required:
   #     extra_destructive_phrases: ["gcloud projects delete", "kubectl delete ns"]
   #     extra_confirmation_phrases: ["require ticket approval"]
+  #   detect-instruction-bloat:
+  #     max_words: 200
 
 paths:
   # Path globs to exclude from discovery.

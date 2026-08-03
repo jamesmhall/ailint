@@ -17,6 +17,8 @@ pub struct MarkdownDoc {
     pub code_blocks: Vec<CodeBlock>,
     /// Bullet and ordered list items, flattened.
     pub list_items: Vec<ListItem>,
+    /// Top-level prose paragraphs (excludes headings, list items, code blocks).
+    pub paragraphs: Vec<Paragraph>,
     /// All hyperlinks.
     pub links: Vec<Link>,
 }
@@ -76,6 +78,17 @@ pub struct ListItem {
     pub line: usize,
 }
 
+/// A top-level prose paragraph (not inside a list item or code block).
+#[derive(Debug, Clone)]
+pub struct Paragraph {
+    /// Paragraph text with inline markup stripped.
+    pub text: String,
+    /// Byte span in the original input.
+    pub byte_range: Range<usize>,
+    /// 1-based line number.
+    pub line: usize,
+}
+
 /// A hyperlink discovered in the document (`[text](url)` or reference form).
 #[derive(Debug, Clone)]
 pub struct Link {
@@ -101,12 +114,14 @@ pub fn parse(input: &str) -> MarkdownDoc {
         sections: Vec::new(),
         code_blocks: Vec::new(),
         list_items: Vec::new(),
+        paragraphs: Vec::new(),
         links: Vec::new(),
     };
 
     let mut heading_stack: Vec<PendingHeading> = Vec::new();
     let mut code_stack: Vec<PendingCodeBlock> = Vec::new();
     let mut item_stack: Vec<PendingListItem> = Vec::new();
+    let mut paragraph_stack: Vec<PendingParagraph> = Vec::new();
     let mut link_stack: Vec<PendingLink> = Vec::new();
 
     for (event, raw_range) in Parser::new_ext(body, Options::empty()).into_offset_iter() {
@@ -175,6 +190,25 @@ pub fn parse(input: &str) -> MarkdownDoc {
                     });
                 }
             }
+            Event::Start(Tag::Paragraph) => {
+                // Nested paragraphs (inside list items, blockquotes) don't count as top-level prose.
+                if item_stack.is_empty() {
+                    paragraph_stack.push(PendingParagraph {
+                        text: String::new(),
+                        start: range.start,
+                    });
+                }
+            }
+            Event::End(TagEnd::Paragraph) => {
+                if let Some(pending) = paragraph_stack.pop() {
+                    let line = offset_to_line(&line_starts, pending.start);
+                    doc.paragraphs.push(Paragraph {
+                        text: pending.text.trim().to_string(),
+                        byte_range: pending.start..range.end,
+                        line,
+                    });
+                }
+            }
             Event::Start(Tag::Link { dest_url, .. }) => {
                 link_stack.push(PendingLink {
                     url: dest_url.to_string(),
@@ -203,6 +237,9 @@ pub fn parse(input: &str) -> MarkdownDoc {
                     if let Some(li) = item_stack.last_mut() {
                         li.text.push_str(&t);
                     }
+                    if let Some(p) = paragraph_stack.last_mut() {
+                        p.text.push_str(&t);
+                    }
                     if let Some(lk) = link_stack.last_mut() {
                         lk.text.push_str(&t);
                     }
@@ -214,6 +251,9 @@ pub fn parse(input: &str) -> MarkdownDoc {
                 }
                 if let Some(li) = item_stack.last_mut() {
                     li.text.push_str(&t);
+                }
+                if let Some(p) = paragraph_stack.last_mut() {
+                    p.text.push_str(&t);
                 }
                 if let Some(lk) = link_stack.last_mut() {
                     lk.text.push_str(&t);
@@ -240,6 +280,11 @@ struct PendingCodeBlock {
 }
 
 struct PendingListItem {
+    text: String,
+    start: usize,
+}
+
+struct PendingParagraph {
     text: String,
     start: usize,
 }

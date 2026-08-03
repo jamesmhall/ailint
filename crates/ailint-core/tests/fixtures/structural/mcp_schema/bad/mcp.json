@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "broken": {
+      "args": ["should-have-a-command"]
+    },
+    "bad-args": {
+      "command": "node",
+      "args": "not-an-array"
+    },
+    "bad-env": {
+      "command": "python",
+      "env": ["FOO=1"]
+    }
+  }
+}

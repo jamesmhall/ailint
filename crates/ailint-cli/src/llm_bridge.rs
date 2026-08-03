@@ -106,13 +106,34 @@ pub fn run(config: &Config, root: &Path) -> Vec<Violation> {
     };
 
     let mut out = Vec::new();
+    let run_quality = !is_disabled(&config.rules.disabled, "AIL900", "llm-quality-score");
+    let run_actionability =
+        !is_disabled(&config.rules.disabled, "AIL901", "llm-actionability-check");
     for doc in &docs {
-        match rt.block_on(ailint_llm::analyze(provider.as_ref(), &llm_cfg.model, doc)) {
-            Ok(mut v) => out.append(&mut v),
-            Err(e) => {
-                tracing::warn!("AIL900 analyzer failed on {}: {e:#}", doc.path.display());
+        if run_quality {
+            match rt.block_on(ailint_llm::analyze(provider.as_ref(), &llm_cfg.model, doc)) {
+                Ok(mut v) => out.append(&mut v),
+                Err(e) => {
+                    tracing::warn!("AIL900 analyzer failed on {}: {e:#}", doc.path.display());
+                }
+            }
+        }
+        if run_actionability {
+            match rt.block_on(ailint_llm::analyze_actionability(
+                provider.as_ref(),
+                &llm_cfg.model,
+                doc,
+            )) {
+                Ok(mut v) => out.append(&mut v),
+                Err(e) => {
+                    tracing::warn!("AIL901 analyzer failed on {}: {e:#}", doc.path.display());
+                }
             }
         }
     }
     out
+}
+
+fn is_disabled(disabled: &[String], code: &str, slug: &str) -> bool {
+    disabled.iter().any(|d| d == code || d == slug)
 }

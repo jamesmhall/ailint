@@ -10,3 +10,4 @@ Semantic rules analyze the language, clarity, and usefulness of the instructions
 | [AIL103](AIL103.md) | `no-duplicate-rules` | Detects when the same instruction essentially repeats itself inside a single file. |
 | [AIL104](AIL104.md) | `negative-constraint-overload` | Flags files where negative constraints ("do not", "never") dominate affirmative guidance. |
 | [AIL105](AIL105.md) | `vendor-optimization-syntax` | Recommends XML tags (like `<conventions>`) in guidance files for Anthropic-hosted agents. |
+| [AIL106](AIL106.md) | `detect-instruction-bloat` | Flags monolithic prose paragraphs that agents are prone to skim. |

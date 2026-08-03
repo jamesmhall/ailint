@@ -111,6 +111,11 @@ fn dispatch(raw: &str, file_type: FileType, path: &Path) -> DocumentContent {
             Err(e) => DocumentContent::ParseError(e.to_string()),
         },
 
+        FileType::McpConfig => match json::parse(raw) {
+            Ok(v) => DocumentContent::Json(v),
+            Err(e) => DocumentContent::ParseError(e.to_string()),
+        },
+
         FileType::Unknown => DocumentContent::Text,
     }
 }

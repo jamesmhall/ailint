@@ -185,3 +185,39 @@ fn ail104_min_list_items_suppresses_firing() {
         "expected AIL104 suppressed by min_list_items, got {violations:?}"
     );
 }
+
+#[test]
+fn ail106_fires_on_monolithic_paragraph() {
+    let path = fixture("instruction_bloat", "bad");
+    let violations = lint(&path, &Config::default()).unwrap();
+    assert!(
+        count(&violations, 106) >= 1,
+        "expected AIL106 to fire, got {violations:?}"
+    );
+}
+
+#[test]
+fn ail106_silent_on_short_paragraphs_with_lists() {
+    let path = fixture("instruction_bloat", "good");
+    let violations = lint(&path, &Config::default()).unwrap();
+    assert_eq!(
+        count(&violations, 106),
+        0,
+        "expected AIL106 silent, got {violations:?}"
+    );
+}
+
+#[test]
+fn ail106_respects_max_words_override() {
+    let mut cfg = Config::default();
+    let opts: serde_yaml::Value = serde_yaml::from_str("max_words: 5").unwrap();
+    cfg.rules
+        .options
+        .insert("detect-instruction-bloat".to_string(), opts);
+    let path = fixture("instruction_bloat", "good");
+    let violations = lint(&path, &cfg).unwrap();
+    assert!(
+        count(&violations, 106) >= 1,
+        "expected AIL106 to fire with max_words=5 on the 'good' fixture, got {violations:?}"
+    );
+}

@@ -8,7 +8,7 @@
 pub mod analyzer;
 pub mod provider;
 
-pub use analyzer::{analyze, AIL900};
+pub use analyzer::{analyze, analyze_actionability, AIL900, AIL901};
 pub use provider::{
     AnthropicProvider, ChatRequest, ChatResponse, GoogleProvider, LlmProvider, OllamaProvider,
     OpenAiProvider, ProviderKind, ResponseFormat, Usage,
