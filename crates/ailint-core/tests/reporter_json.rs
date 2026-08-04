@@ -46,7 +46,14 @@ fn json_report_snapshot() {
     JsonReporter::with_now(frozen_now)
         .report(&vs, &mut buf)
         .unwrap();
-    insta::assert_snapshot!(String::from_utf8(buf).unwrap());
+    // Redact the tool version so the snapshot survives version bumps.
+    let out = String::from_utf8(buf).unwrap();
+    let redacted = out.replacen(
+        &format!("\"version\": \"{}\"", env!("CARGO_PKG_VERSION")),
+        "\"version\": \"[REDACTED]\"",
+        1,
+    );
+    insta::assert_snapshot!(redacted);
 }
 
 #[test]
