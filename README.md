@@ -66,7 +66,7 @@ docker run --rm -v "$PWD":/src ghcr.io/jamesmhall/ailint check /src
 # pre-commit hook
 # repos:
 #   - repo: https://github.com/jamesmhall/ailint
-#     rev: v1.0.2
+#     rev: v1.1.0
 #     hooks:
 #       - id: ailint
 
