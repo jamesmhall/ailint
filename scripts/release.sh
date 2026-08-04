@@ -70,7 +70,7 @@ if [[ "${ALREADY_BUMPED}" -eq 0 ]]; then
   log "Bumping versions ${CUR_VERSION} -> ${VERSION}"
 
   # Root Cargo.toml [workspace.package] version
-  # Root Cargo.toml [workspace.dependencies] ailint-core / ailint-llm version pins
+  # Root Cargo.toml [workspace.dependencies] ailint-core / ailint-llm / ailint-extractor version pins
   python3 - <<PY
 import re, pathlib
 p = pathlib.Path("Cargo.toml")
@@ -84,6 +84,8 @@ s = re.sub(r'(ailint-core = \{ path = "crates/ailint-core", version = ")[^"]+(")
 s = re.sub(r'(ailint-llm  = \{ path = "crates/ailint-llm",  version = ")[^"]+(")',
            lambda m: m.group(1) + "${VERSION}" + m.group(2), s)
 s = re.sub(r'(ailint-llm = \{ path = "crates/ailint-llm", version = ")[^"]+(")',
+           lambda m: m.group(1) + "${VERSION}" + m.group(2), s)
+s = re.sub(r'(ailint-extractor = \{ path = "crates/ailint-extractor", version = ")[^"]+(")',
            lambda m: m.group(1) + "${VERSION}" + m.group(2), s)
 p.write_text(s)
 PY
@@ -126,10 +128,12 @@ cargo clippy --workspace --all-targets -- -D warnings
 log "cargo test --workspace"
 cargo test --workspace --quiet
 
-log "cargo publish --dry-run (all three crates)"
-cargo publish --dry-run -p ailint-core --allow-dirty --quiet
-cargo publish --dry-run -p ailint-llm  --allow-dirty --quiet
-cargo publish --dry-run -p ailint-cli  --allow-dirty --quiet
+log "cargo publish --dry-run (leaf crate only)"
+# Only ailint-extractor's dry-run is meaningful locally. The other crates
+# depend on unpublished internal crates, so their dry-run always hits
+# 'no matching package on crates.io index' until the workflow publishes
+# in order. CI's real publish step covers those.
+cargo publish --dry-run -p ailint-extractor --allow-dirty --quiet
 
 # ---------------------------------------------------------------------------
 # 4. Commit release bump (if there's anything to commit) and push
