@@ -5,8 +5,8 @@
 class Ailint < Formula
   desc "Linter for AI agent guidance files (CLAUDE.md, AGENTS.md, Copilot/Cursor rules)"
   homepage "https://github.com/jamesmhall/ailint"
-  url "https://github.com/jamesmhall/ailint/archive/refs/tags/v1.0.2.tar.gz"
-  sha256 "98f411c156213271a7330df22a6c5f5f517e9e7915cdffb0cccd4c3496cad478"
+  url "https://github.com/jamesmhall/ailint/archive/refs/tags/v1.1.0.tar.gz"
+  sha256 "6cfd22510755458eca30c36798963533cb9c7d9fddf61e8c3a70977dfdca7a96"
   license any_of: ["MIT", "Apache-2.0"]
   head "https://github.com/jamesmhall/ailint.git", branch: "main"
 
