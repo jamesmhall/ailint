@@ -150,6 +150,8 @@ jobs:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: |
           set -euo pipefail
+          cargo publish -p ailint-extractor --locked
+          sleep 20
           cargo publish -p ailint-core --locked
           sleep 20
           cargo publish -p ailint-llm --locked

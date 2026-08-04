@@ -24,8 +24,8 @@ what a release is, when to cut one, and exactly how to do it.
 A release is the coordinated publication of one workspace version to five
 distribution channels:
 
-1. **crates.io** — three crates published in dependency order:
-   `ailint-core`, then `ailint-llm`, then `ailint-cli`.
+1. **crates.io** — four crates published in dependency order:
+   `ailint-extractor`, then `ailint-core`, then `ailint-llm`, then `ailint-cli`.
 2. **npm** — the `ailint` package (thin installer that downloads the CLI
    binary).
 3. **GitHub Container Registry** — `ghcr.io/jamesmhall/ailint:{tag}` +
@@ -58,8 +58,9 @@ All must be bumped to the same value in the same commit:
 
 1. `Cargo.toml` — root `[workspace.package] version`
 2. `Cargo.toml` — internal dep pins under `[workspace.dependencies]`:
-   `ailint-core = { path = "…", version = "X.Y.Z" }` and
-   `ailint-llm = { path = "…", version = "X.Y.Z" }`
+   `ailint-core = { path = "…", version = "X.Y.Z" }`,
+   `ailint-llm = { path = "…", version = "X.Y.Z" }`, and
+   `ailint-extractor = { path = "…", version = "X.Y.Z" }`
 3. `npm/package.json` — `"version": "X.Y.Z"`
 4. `README.md` — the pre-commit example rev (`rev: v{X.Y.Z}`)
 
@@ -93,9 +94,11 @@ Preflight (before running anything):
 - [ ] Working tree clean: `git status` is empty.
 - [ ] On branch `main`, up to date: `git switch main && git pull --ff-only`.
 - [ ] Decided the version and semver bump (see [Semver decision](#semver-decision)).
-- [ ] `cargo publish --dry-run -p ailint-core -p ailint-llm -p ailint-cli`
-      succeeds. The tag snapshots the workflow — a broken tag cannot be
-      re-run.
+- [ ] `cargo publish --dry-run -p ailint-extractor --allow-dirty` succeeds.
+      Only the leaf crate can be dry-run locally; the others depend on
+      unpublished internal crates, so their dry-run always fails until
+      CI's real publish step runs them in order. The tag snapshots the
+      workflow — a broken tag cannot be re-run.
 
 Then choose one path below.
 
@@ -116,7 +119,9 @@ The script performs, in order:
 4. `cargo fmt --all --check`.
 5. `cargo clippy --workspace --all-targets -- -D warnings`.
 6. `cargo test --workspace`.
-7. `cargo publish --dry-run` for all three crates.
+7. `cargo publish --dry-run` for `ailint-extractor` (leaf crate only —
+   the other crates depend on unpublished internal crates, so their
+   dry-run always fails; CI's real publish step covers them).
 8. Commits `chore: release v{X.Y.Z}` and pushes to `main` (admin bypass;
    no CI run because `ci.yml` doesn't trigger on push).
 9. Tags `v{X.Y.Z}` and pushes the tag → **triggers the single `Release`
@@ -142,13 +147,11 @@ cargo build --workspace
 cargo test --workspace
 cargo clippy --workspace --all-targets -- -D warnings
 cargo fmt --all --check
-cargo publish --dry-run -p ailint-core
-cargo publish --dry-run -p ailint-llm
-cargo publish --dry-run -p ailint-cli
+cargo publish --dry-run -p ailint-extractor --allow-dirty
 
 # 1. Bump versions (edit files by hand):
 #    - Cargo.toml   [workspace.package] version = "X.Y.Z"
-#    - Cargo.toml   [workspace.dependencies] ailint-core / ailint-llm version = "X.Y.Z"
+#    - Cargo.toml   [workspace.dependencies] ailint-core / ailint-llm / ailint-extractor version = "X.Y.Z"
 #    - npm/package.json  "version": "X.Y.Z"
 #    - README.md    pre-commit rev: v{X.Y.Z}
 
